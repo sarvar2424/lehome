@@ -1,1385 +1,580 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>LEORA Premium - HOME</title>
-    <style>
-        /* ===== БАЗОВЫЙ СБРОС И НАСТРОЙКИ ===== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-        
-        /* ===== СИСТЕМА ТЕМ - ПРАВИЛЬНАЯ АРХИТЕКТУРА ===== */
-        /* Темная тема - используем логичные имена без конфликтов */
-        body[data-theme='dark'] {
-            /* Фоновые цвета */
-            --bg-primary: #000000;
-            --bg-secondary: #0A0A0A;
-            --bg-card: #1C1C1E;
-            --bg-elevated: #2C2C2E;
-            
-            /* Текстовые цвета */
-            --text-primary: #FFFFFF;
-            --text-secondary: #8E8E93;
-            --text-tertiary: #48484A;
-            
-            /* Границы и разделители */
-            --border-primary: rgba(255,255,255,0.10);
-            --border-secondary: rgba(255,255,255,0.05);
-            
-            /* Прозрачные слои для эффектов */
-            --overlay-light: rgba(255,255,255,0.05);
-            --overlay-medium: rgba(255,255,255,0.10);
-            --overlay-heavy: rgba(255,255,255,0.15);
-            
-            /* Градиенты для фонов */
-            --gradient-bg: linear-gradient(180deg, #000000 0%, #0A0A0A 100%);
-            --gradient-card: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
-            --gradient-nav: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.95) 100%);
-            
-            /* Трек прогресса */
-            --progress-bg: #3C3C3E;
-            
-            /* Тени */
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
-            --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
-            --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
-        }
-        
-        /* Светлая тема - те же переменные, другие значения */
-        body[data-theme='light'] {
-            /* Фоновые цвета */
-            --bg-primary: #FFFFFF;
-            --bg-secondary: #F2F2F7;
-            --bg-card: #FFFFFF;
-            --bg-elevated: #FAFAFA;
-            
-            /* Текстовые цвета */
-            --text-primary: #0B0B0F;
-            --text-secondary: #6B7280;
-            --text-tertiary: #9CA3AF;
-            
-            /* Границы и разделители */
-            --border-primary: rgba(0,0,0,0.06);
-            --border-secondary: rgba(0,0,0,0.03);
-            
-            /* Прозрачные слои для эффектов */
-            --overlay-light: rgba(0,0,0,0.03);
-            --overlay-medium: rgba(0,0,0,0.06);
-            --overlay-heavy: rgba(0,0,0,0.10);
-            
-            /* Градиенты для фонов */
-            --gradient-bg: linear-gradient(180deg, #FFFFFF 0%, #F2F2F7 100%);
-            --gradient-card: linear-gradient(135deg, #FFFFFF 0%, rgba(250,250,250,0.9) 100%);
-            --gradient-nav: linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.95) 100%);
-            
-            /* Трек прогресса */
-            --progress-bg: #E5E7EB;
-            
-            /* Тени */
-            --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
-            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
-            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
-        }
-        
-        /* Акцентные цвета - одинаковые для обеих тем */
-        body {
-            /* Основные акценты */
-            --color-green: #32D74B;
-            --color-red: #FF453A;
-            --color-orange: #FF9F0A;
-            --color-blue: #007AFF;
-            --color-purple: #AF52DE;
-            --color-cyan: #64D2FF;
-            
-            /* Градиенты акцентов */
-            --gradient-fab: linear-gradient(135deg, #007AFF 0%, #64D2FF 100%);
-            --gradient-success: linear-gradient(135deg, #32D74B 0%, #28A745 100%);
-            --gradient-premium: linear-gradient(135deg, #AF52DE 0%, #8E52DE 100%);
-        }
-        
-        /* ===== ОСНОВНЫЕ СТИЛИ ===== */
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
-            font-size: 15px;
-            line-height: 20px;
-            color: var(--text-primary);
-            background: var(--gradient-bg);
-            min-height: 100vh;
-            max-width: 430px;
-            margin: 0 auto;
-            position: relative;
-            overflow-x: hidden;
-            transition: background 0.3s ease, color 0.3s ease;
-        }
-        
-        /* ===== ТИПОГРАФИКА ===== */
-        .h3 {
-            font-size: 20px;
-            line-height: 25px;
-            font-weight: 600;
-            letter-spacing: -0.3px;
-        }
-        
-        .body-small {
-            font-size: 13px;
-            line-height: 18px;
-            font-weight: 400;
-            letter-spacing: -0.1px;
-        }
-        
-        /* ===== КОНТЕЙНЕР ===== */
-        .container {
-            padding: 0 20px 100px;
-        }
-        
-        /* ===== ШАПКА ===== */
-        .header {
-            height: 120px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 48px 20px 0;
-            position: relative;
-            z-index: 10;
-        }
-        
-        .header-title {
-            color: var(--text-primary);
-            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .header-subtitle {
-            color: var(--text-secondary);
-            margin-top: 4px;
-        }
-        
-        .header-actions {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .header-action {
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
-            background: var(--gradient-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .header-action:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .header-action svg {
-            width: 18px;
-            height: 18px;
-            stroke: var(--text-primary);
-            fill: none;
-        }
-        
-        /* ===== KPI КОЛЬЦА ===== */
-        .kpi-section {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 32px;
-            gap: 12px;
-        }
-        
-        .kpi-item {
-            flex: 1;
-            text-align: center;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-        }
-        
-        .kpi-item:hover {
-            transform: translateY(-5px);
-        }
-        
-        .kpi-ring-container {
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 8px;
-            position: relative;
-        }
-        
-        .kpi-ring {
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-        }
-        
-        .kpi-ring-bg {
-            fill: none;
-            stroke: var(--progress-bg);
-            stroke-width: 8;
-            opacity: 0.3;
-        }
-        
-        .kpi-ring-fill {
-            fill: none;
-            stroke-width: 10;
-            stroke-linecap: round;
-            transition: all 0.6s cubic-bezier(0.65, 0, 0.35, 1);
-        }
-        
-        .kpi-value {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .kpi-label {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 2px;
-        }
-        
-        .kpi-sublabel {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-        
-        /* Анимация пульсации для фокуса */
-        @keyframes pulse {
-            0%, 100% { 
-                opacity: 1;
-                filter: drop-shadow(0 0 8px var(--color-purple));
-            }
-            50% { 
-                opacity: 0.7;
-                filter: drop-shadow(0 0 16px var(--color-purple));
-            }
-        }
-        
-        .pulsing {
-            animation: pulse 2s ease-in-out infinite;
-        }
-        
-        /* ===== AI КАРТОЧКИ ===== */
-        .ai-card {
-            background: var(--gradient-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 16px;
-            position: relative;
-            overflow: hidden;
-            box-shadow: var(--shadow-md);
-            transition: all 0.3s ease;
-        }
-        
-        .ai-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .ai-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            background: var(--gradient-premium);
-            opacity: 0.9;
-        }
-        
-        .ai-card-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        
-        .ai-card-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            background: var(--gradient-premium);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 12px rgba(175,82,222,0.3);
-        }
-        
-        .ai-card-icon svg {
-            width: 20px;
-            height: 20px;
-            stroke: white;
-            fill: none;
-        }
-        
-        .ai-card-title {
-            flex: 1;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-primary);
-        }
-        
-        .ai-card-confidence {
-            font-size: 11px;
-            color: var(--text-secondary);
-            background: var(--overlay-medium);
-            padding: 4px 8px;
-            border-radius: 6px;
-        }
-        
-        .ai-card-body {
-            font-size: 14px;
-            line-height: 20px;
-            color: var(--text-secondary);
-            margin-bottom: 16px;
-        }
-        
-        .ai-card-actions {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .ai-action {
-            flex: 1;
-            padding: 12px;
-            background: var(--overlay-medium);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-primary);
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        
-        .ai-action:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .ai-action.primary {
-            background: var(--gradient-fab);
-            border: none;
-            color: white;
-        }
-        
-        .ai-action svg {
-            width: 16px;
-            height: 16px;
-        }
-        
-        /* ===== СЕКЦИЯ "МОЙ ДЕНЬ" ===== */
-        .section-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        
-        .section-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .section-title svg {
-            width: 20px;
-            height: 20px;
-            stroke: var(--color-blue);
-            fill: none;
-        }
-        
-        .section-action {
-            font-size: 14px;
-            color: var(--color-blue);
-            cursor: pointer;
-        }
-        
-        /* ===== КАРТОЧКИ ЗАДАЧ ===== */
-        .task-card {
-            background: var(--gradient-card);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border-primary);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            position: relative;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            overflow: hidden;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .task-card:hover {
-            transform: translateX(4px);
-            box-shadow: var(--shadow-md);
-        }
-        
-        .task-priority {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-        }
-        
-        .task-priority.high { background: var(--color-red); }
-        .task-priority.medium { background: var(--color-orange); }
-        .task-priority.low { background: var(--text-tertiary); }
-        
-        .task-checkbox {
-            width: 24px;
-            height: 24px;
-            border-radius: 8px;
-            border: 2px solid var(--text-tertiary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            background: var(--overlay-light);
-        }
-        
-        .task-checkbox.checked {
-            background: var(--gradient-success);
-            border-color: var(--color-green);
-        }
-        
-        .task-checkbox svg {
-            width: 14px;
-            height: 14px;
-            stroke: white;
-            stroke-width: 3;
-            fill: none;
-            opacity: 0;
-            transition: opacity 0.2s ease;
-        }
-        
-        .task-checkbox.checked svg {
-            opacity: 1;
-        }
-        
-        .task-title {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: 6px;
-        }
-        
-        .task-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        
-        .task-chip {
-            background: var(--overlay-medium);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 11px;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-        
-        .task-chip svg {
-            width: 12px;
-            height: 12px;
-        }
-        
-        .task-actions {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .task-action {
-            width: 32px;
-            height: 32px;
-            border-radius: 10px;
-            background: var(--overlay-medium);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 1px solid var(--border-secondary);
-        }
-        
-        .task-action:hover {
-            background: var(--overlay-heavy);
-            transform: scale(1.1);
-        }
-        
-        .task-action svg {
-            width: 16px;
-            height: 16px;
-            stroke: var(--text-primary);
-            fill: none;
-        }
-        
-        /* ===== МОТИВАЦИОННАЯ КАРТОЧКА ===== */
-        .motivation-card {
-            background: var(--gradient-premium);
-            border-radius: 20px;
-            padding: 24px;
-            margin-top: 24px;
-            text-align: center;
-            box-shadow: 0 10px 40px rgba(175,82,222,0.3);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .motivation-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: shimmer 3s linear infinite;
-        }
-        
-        @keyframes shimmer {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .motivation-emoji {
-            font-size: 36px;
-            margin-bottom: 12px;
-        }
-        
-        .motivation-text {
-            font-size: 18px;
-            font-weight: 600;
-            color: white;
-            margin-bottom: 6px;
-            position: relative;
-        }
-        
-        .motivation-subtext {
-            font-size: 14px;
-            color: rgba(255,255,255,0.9);
-            position: relative;
-        }
-        
-        /* ===== НИЖНЯЯ НАВИГАЦИЯ ===== */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 80px;
-            background: var(--gradient-nav);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-top: 1px solid var(--border-primary);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding-bottom: 20px;
-            z-index: 100;
-        }
-        
-        .nav-item {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
-        
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            top: -1px;
-            left: 20%;
-            right: 20%;
-            height: 2px;
-            background: var(--color-blue);
-            border-radius: 2px;
-        }
-        
-        .nav-icon {
-            width: 24px;
-            height: 24px;
-            transition: all 0.2s ease;
-        }
-        
-        .nav-icon svg {
-            width: 100%;
-            height: 100%;
-            stroke: var(--text-secondary);
-            fill: none;
-            stroke-width: 2;
-        }
-        
-        .nav-item.active .nav-icon svg {
-            stroke: var(--color-blue);
-            transform: scale(1.1);
-        }
-        
-        .nav-label {
-            font-size: 10px;
-            color: var(--text-secondary);
-            font-weight: 500;
-        }
-        
-        .nav-item.active .nav-label {
-            color: var(--color-blue);
-            font-weight: 600;
-        }
-        
-        /* ===== FAB КНОПКА ===== */
-        .fab {
-            position: fixed;
-            bottom: 100px;
-            right: 20px;
-            width: 56px;
-            height: 56px;
-            border-radius: 20px;
-            background: var(--gradient-fab);
-            box-shadow: 0 8px 32px rgba(0,122,255,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 99;
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            overflow: hidden;
-        }
-        
-        .fab::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255,255,255,0.3);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-        
-        .fab:hover::before {
-            width: 100px;
-            height: 100px;
-        }
-        
-        .fab-icon {
-            width: 24px;
-            height: 24px;
-            transition: transform 0.3s ease;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .fab-icon svg {
-            width: 100%;
-            height: 100%;
-            stroke: white;
-            fill: none;
-            stroke-width: 2.5;
-        }
-        
-        .fab.open .fab-icon {
-            transform: rotate(45deg);
-        }
-        
-        /* ===== МЕНЮ FAB ===== */
-        .fab-menu {
-            position: fixed;
-            bottom: 165px;
-            right: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s ease;
-        }
-        
-        .fab-menu.open {
-            opacity: 1;
-            pointer-events: all;
-        }
-        
-        .fab-option {
-            background: var(--bg-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            border-radius: 14px;
-            padding: 12px 16px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            white-space: nowrap;
-            cursor: pointer;
-            transform: translateX(20px);
-            opacity: 0;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-md);
-        }
-        
-        .fab-menu.open .fab-option {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        
-        .fab-menu.open .fab-option:nth-child(1) { transition-delay: 0.05s; }
-        .fab-menu.open .fab-option:nth-child(2) { transition-delay: 0.1s; }
-        .fab-menu.open .fab-option:nth-child(3) { transition-delay: 0.15s; }
-        .fab-menu.open .fab-option:nth-child(4) { transition-delay: 0.2s; }
-        
-        .fab-option:hover {
-            transform: scale(1.05);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .fab-option-icon {
-            width: 20px;
-            height: 20px;
-        }
-        
-        .fab-option-icon svg {
-            width: 100%;
-            height: 100%;
-            stroke: var(--color-blue);
-            fill: none;
-        }
-        
-        .fab-option-text {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-        
-        /* ===== ПЕРЕКЛЮЧАТЕЛЬ ТЕМЫ ===== */
-        .theme-toggle {
-            position: fixed;
-            top: 60px;
-            right: 20px;
-            width: 44px;
-            height: 44px;
-            border-radius: 14px;
-            background: var(--gradient-card);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 1000;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-sm);
-        }
-        
-        .theme-toggle:hover {
-            transform: rotate(180deg);
-        }
-        
-        .theme-toggle svg {
-            width: 24px;
-            height: 24px;
-            fill: var(--color-orange);
-        }
-        
-        /* ===== TOAST УВЕДОМЛЕНИЯ ===== */
-        .toast {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--bg-card);
-            color: var(--text-primary);
-            padding: 14px 20px;
-            border-radius: 14px;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-primary);
-            z-index: 1000;
-            animation: slideUp 0.3s ease;
-            box-shadow: var(--shadow-lg);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        @keyframes slideUp {
-            from { transform: translate(-50%, 100px); opacity: 0; }
-            to { transform: translate(-50%, 0); opacity: 1; }
-        }
-        
-        @keyframes slideDown {
-            from { transform: translate(-50%, 0); opacity: 1; }
-            to { transform: translate(-50%, 100px); opacity: 0; }
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LEORA Voice Wave — Interweaving Ribbons</title>
+  <style>
+    :root { color-scheme: dark; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background:
+        radial-gradient(1200px 800px at 30% 25%, #111421 0%, #0a0f1a 55%, #090c16 75%, #05060b 100%),
+        radial-gradient(900px 700px at 85% 70%, rgba(120, 40, 90, 0.5), transparent 60%),
+        #05070b;
+      overflow: hidden;
+      font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Text", Segoe UI, Roboto, Helvetica, Arial;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .wrap {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      position: relative;
+      padding-bottom: 80px;
+    }
+
+    .orb-shell {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .orb-shell::before {
+      content: "";
+      position: absolute;
+      width: min(90vmin, 760px);
+      height: min(90vmin, 760px);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background:
+        radial-gradient(circle at 20% 25%, rgba(120, 220, 255, 0.35), transparent 55%),
+        radial-gradient(circle at 80% 35%, rgba(180, 120, 255, 0.3), transparent 58%),
+        radial-gradient(circle at 30% 80%, rgba(255, 120, 190, 0.25), transparent 60%);
+      filter: blur(36px);
+      opacity: 0.9;
+      z-index: -2;
+    }
+
+    .orb-shell::after {
+      content: "";
+      position: absolute;
+      width: min(72vmin, 600px);
+      height: min(72vmin, 600px);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background:
+        radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.12), transparent 60%),
+        radial-gradient(circle at 50% 90%, rgba(60, 120, 255, 0.1), transparent 70%);
+      filter: blur(18px);
+      opacity: 0.75;
+      z-index: -1;
+    }
+
+    canvas {
+      width: min(70vmin, 540px);
+      height: min(70vmin, 540px);
+      display: block;
+    }
+
+    .labels {
+      margin-top: 26px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .labels .title {
+      font-size: 14px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #f9fafb;
+      margin-bottom: 6px;
+    }
+
+    .labels .subtitle {
+      font-size: 13px;
+      color: rgba(209, 213, 219, 0.65);
+    }
+
+    .panel {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      background: rgba(10, 12, 18, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.18);
+      backdrop-filter: blur(10px);
+      border-radius: 14px;
+      padding: 10px 12px;
+      align-items: center;
+      box-shadow:
+        0 16px 32px rgba(0,0,0,.55),
+        0 0 40px rgba(79, 70, 229, 0.25);
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      background: radial-gradient(circle at 0 0, rgba(148, 163, 253, 0.12), rgba(30, 41, 59, 0.8));
+      color: #e2e8f0;
+      padding: 8px 12px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 500;
+      letter-spacing: .02em;
+      font-size: 13px;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+    }
+    .btn:hover {
+      background: radial-gradient(circle at 0 0, rgba(191, 219, 254, 0.18), rgba(30, 64, 175, 0.85));
+      transform: translateY(-1px);
+    }
+    .btn[aria-pressed="true"] {
+      background: linear-gradient(180deg, rgba(59,130,246,.45), rgba(59,130,246,.18));
+      border-color: rgba(147,197,253,.75);
+    }
+
+    .info {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-left: 4px;
+      user-select: none;
+    }
+  </style>
 </head>
-<body data-theme="dark">
-    <!-- Переключатель темы -->
-    <div class="theme-toggle" onclick="toggleTheme()">
-        <svg id="themeIcon" viewBox="0 0 24 24">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-        </svg>
+<body>
+  <div class="wrap">
+    <div class="orb-shell">
+      <canvas id="sphere"></canvas>
+      <div class="labels">
+        <div class="title">LISTENING</div>
+        <div class="subtitle">Speak naturally</div>
+      </div>
     </div>
-    
-    <!-- Шапка -->
-    <div class="header">
-        <div>
-            <div class="h3 header-title">Добрый вечер, Sarvar</div>
-            <div class="body-small header-subtitle">Понедельник, 25 августа</div>
-        </div>
-        <div class="header-actions">
-            <div class="header-action" onclick="showSearch()">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                </svg>
-            </div>
-            <div class="header-action" onclick="showNotifications()">
-                <svg viewBox="0 0 24 24">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                </svg>
-            </div>
-        </div>
+
+    <div class="panel" role="toolbar" aria-label="controls">
+      <button id="idle" class="btn" aria-pressed="true">Idle</button>
+      <button id="active" class="btn" aria-pressed="false">Active</button>
+      <button id="mic" class="btn" aria-pressed="false">Mic</button>
+      <span class="info" id="msg"></span>
     </div>
-    
-    <!-- Основной контент -->
-    <div class="container">
-        <!-- KPI Кольца -->
-        <div class="kpi-section">
-            <div class="kpi-item" onclick="showTaskDetails()">
-                <div class="kpi-ring-container">
-                    <svg class="kpi-ring">
-                        <circle cx="50" cy="50" r="40" class="kpi-ring-bg"></circle>
-                        <circle cx="50" cy="50" r="40" class="kpi-ring-fill" 
-                                stroke="#32D74B"
-                                stroke-dasharray="150 251"
-                                stroke-dashoffset="0"></circle>
-                    </svg>
-                    <div class="kpi-value">3/5</div>
-                </div>
-                <div class="kpi-label">Задачи</div>
-                <div class="kpi-sublabel">60% выполнено</div>
-            </div>
+  </div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const canvas = document.getElementById('sphere');
+      const ctx = canvas.getContext('2d', { alpha: true });
+
+      const DPR_MAX = 2;
+      let dpr = Math.min(DPR_MAX, window.devicePixelRatio || 1);
+
+      const state = {
+        mode: 'idle',
+        amp: 0.18,
+        targetAmp: 0.18,
+        time: 0,
+      };
+
+      let audioCtx = null;
+      let analyser = null;
+      let micStream = null;
+      let timeData = null;
+
+      function setCanvasSize() {
+        const wCss = canvas.clientWidth || 540;
+        const hCss = canvas.clientHeight || 540;
+        dpr = Math.min(DPR_MAX, window.devicePixelRatio || 1);
+        canvas.width = Math.floor(wCss * dpr);
+        canvas.height = Math.floor(hCss * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      const resizeObserver = new ResizeObserver(setCanvasSize);
+      resizeObserver.observe(canvas);
+      setCanvasSize();
+
+      const TAU = Math.PI * 2;
+      const PI = Math.PI;
+      const lerp = (a, b, t) => a + (b - a) * t;
+      const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
+
+      // Цвета для двух лент
+      const cyanColor = { r: 77, g: 208, b: 255 };
+      const purpleColor = { r: 164, g: 91, b: 255 };
+      const pinkColor = { r: 255, g: 101, b: 230 };
+
+      function lerpColor(color1, color2, t) {
+        const r = Math.round(color1.r + (color2.r - color1.r) * t);
+        const g = Math.round(color1.g + (color2.g - color1.g) * t);
+        const b = Math.round(color1.b + (color2.b - color1.b) * t);
+        return { r, g, b };
+      }
+
+      function fillSphereBase(cx, cy, r) {
+        const gradient = ctx.createRadialGradient(cx, cy * 0.7, r * 0.06, cx, cy, r);
+        gradient.addColorStop(0.0, '#0f1520');
+        gradient.addColorStop(0.35, '#0b1220');
+        gradient.addColorStop(0.7, '#070e18');
+        gradient.addColorStop(1.0, '#040710');
+
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, TAU);
+        ctx.fill();
+      }
+
+      function addGleams(cx, cy, r) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+
+        const colorGleam = ctx.createRadialGradient(
+          cx - r * 0.5, cy + r * 0.5, r * 0.05,
+          cx - r * 0.3, cy + r * 0.4, r * 0.6
+        );
+        colorGleam.addColorStop(0.0, 'rgba(255, 140, 90, 0.25)');
+        colorGleam.addColorStop(0.5, 'rgba(200, 100, 150, 0.15)');
+        colorGleam.addColorStop(1.0, 'rgba(0,0,0,0)');
+
+        ctx.fillStyle = colorGleam;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, TAU);
+        ctx.fill();
+
+        const rightGleam = ctx.createRadialGradient(
+          cx + r * 0.5, cy + r * 0.3, r * 0.05,
+          cx + r * 0.4, cy + r * 0.2, r * 0.5
+        );
+        rightGleam.addColorStop(0.0, 'rgba(100, 120, 255, 0.2)');
+        rightGleam.addColorStop(0.5, 'rgba(150, 100, 200, 0.1)');
+        rightGleam.addColorStop(1.0, 'rgba(0,0,0,0)');
+
+        ctx.fillStyle = rightGleam;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, TAU);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.ellipse(cx - r * 0.05, cy - r * 0.42, r * 0.9, r * 0.5, -0.12, 0, TAU);
+
+        const whiteGleam = ctx.createRadialGradient(
+          cx - r * 0.25, cy - r * 0.52, r * 0.08,
+          cx - r * 0.05, cy - r * 0.4, r * 0.7
+        );
+        whiteGleam.addColorStop(0.0, 'rgba(255,255,255,0.2)');
+        whiteGleam.addColorStop(0.18, 'rgba(255,255,255,0.08)');
+        whiteGleam.addColorStop(0.4, 'rgba(210,230,255,0.03)');
+        whiteGleam.addColorStop(1.0, 'rgba(0,0,0,0)');
+
+        ctx.fillStyle = whiteGleam;
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      // ---------------------------------------------------------------------
+      // ДВЕ ЛЕНТЫ: Cyan и Pink, при наложении = Purple
+      // ---------------------------------------------------------------------
+      function drawInterweavingWaves(cx, cy, r, time, intensity, mode) {
+        const waveWidth = r * 2.1;
+        const startX = cx - r * 1.05;
+        const numPoints = 180;
+        const maxWaveHeight = r * 0.7;
+        
+        // В idle режиме - приглушённые цвета
+        const opacityMultiplier = (mode === 'idle') ? 0.4 : 1.0;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 1, 0, TAU);
+        ctx.clip();
+
+        const numLinesPerRibbon = 35;
+
+        // Генерация точек для одной ленты
+        function generateRibbon(timeDirection, baseVerticalOffset) {
+          const lines = [];
+          
+          for (let lineIdx = 0; lineIdx < numLinesPerRibbon; lineIdx++) {
+            const lineT = lineIdx / (numLinesPerRibbon - 1);
             
-            <div class="kpi-item" onclick="toggleFocus()">
-                <div class="kpi-ring-container">
-                    <svg class="kpi-ring">
-                        <circle cx="50" cy="50" r="40" class="kpi-ring-bg"></circle>
-                        <circle cx="50" cy="50" r="40" class="kpi-ring-fill pulsing" 
-                                stroke="#AF52DE"
-                                stroke-dasharray="94 251"
-                                stroke-dashoffset="0"></circle>
-                    </svg>
-                    <div class="kpi-value">75м</div>
-                </div>
-                <div class="kpi-label">Фокус</div>
-                <div class="kpi-sublabel">из 120 минут</div>
-            </div>
+            const phaseOffset = lineT * PI * 2.5 + Math.sin(lineT * PI * 3) * 0.8;
+            const amplitudeVariation = 0.6 + Math.sin(lineT * PI * 2 + 0.5) * 0.4;
+            const speedVariation = 0.8 + lineT * 0.4;
+            const verticalShift = (lineT - 0.5) * maxWaveHeight * 0.25 + baseVerticalOffset;
             
-            <div class="kpi-item" onclick="showFinanceDetails()">
-                <div class="kpi-ring-container">
-                    <svg class="kpi-ring">
-                        <circle cx="50" cy="50" r="40" class="kpi-ring-bg"></circle>
-                        <circle cx="50" cy="50" r="40" class="kpi-ring-fill" 
-                                stroke="#FF9F0A"
-                                stroke-dasharray="180 251"
-                                stroke-dashoffset="0"></circle>
-                    </svg>
-                    <div class="kpi-value">3.4к</div>
-                </div>
-                <div class="kpi-label">Финансы</div>
-                <div class="kpi-sublabel">из 4к лимита</div>
-            </div>
-        </div>
-        
-        <!-- AI Карточки -->
-        <div class="ai-card">
-            <div class="ai-card-header">
-                <div class="ai-card-icon">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                </div>
-                <div class="ai-card-title">Встреча через 45 минут</div>
-                <div class="ai-card-confidence">87%</div>
-            </div>
-            <div class="ai-card-body">
-                Планерка команды в 15:00. Рекомендую начать подготовку — обычно вам требуется 30 минут на сбор материалов.
-            </div>
-            <div class="ai-card-actions">
-                <div class="ai-action primary" onclick="startPreparation()">
-                    <svg viewBox="0 0 24 24" stroke="white" fill="none">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 6v6l4 2"/>
-                    </svg>
-                    <span>Начать подготовку</span>
-                </div>
-                <div class="ai-action" onclick="showDetails()">
-                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                        <path d="M9 11 3 11 3 21 9 21"/>
-                        <path d="M21 3 21 21 15 21 15 3"/>
-                    </svg>
-                    <span>Детали</span>
-                </div>
-            </div>
-        </div>
-        
-        <div class="ai-card">
-            <div class="ai-card-header">
-                <div class="ai-card-icon">
-                    <svg viewBox="0 0 24 24">
-                        <line x1="12" y1="1" x2="12" y2="23"/>
-                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                    </svg>
-                </div>
-                <div class="ai-card-title">Траты выше обычного</div>
-                <div class="ai-card-confidence">92%</div>
-            </div>
-            <div class="ai-card-body">
-                Сегодня потрачено на 23% больше среднего для понедельника. Основная категория — рестораны (1,890₽).
-            </div>
-            <div class="ai-card-actions">
-                <div class="ai-action primary" onclick="setLimit()">
-                    <svg viewBox="0 0 24 24" stroke="white" fill="none">
-                        <circle cx="12" cy="12" r="10"/>
-                        <line x1="15" y1="9" x2="9" y2="15"/>
-                        <line x1="9" y1="9" x2="15" y2="15"/>
-                    </svg>
-                    <span>Установить лимит</span>
-                </div>
-                <div class="ai-action" onclick="showAnalytics()">
-                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                        <line x1="18" y1="20" x2="18" y2="10"/>
-                        <line x1="12" y1="20" x2="12" y2="4"/>
-                        <line x1="6" y1="20" x2="6" y2="14"/>
-                    </svg>
-                    <span>Анализ</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Секция "Мой день" -->
-        <div class="section-header">
-            <div class="section-title">
-                <svg viewBox="0 0 24 24">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="16" y1="2" x2="16" y2="6"/>
-                    <line x1="8" y1="2" x2="8" y2="6"/>
-                    <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <span>Мой день</span>
-            </div>
-            <div class="section-action" onclick="showAllTasks()">Все задачи</div>
-        </div>
-        
-        <!-- Задачи -->
-        <div class="task-card">
-            <div class="task-priority high"></div>
-            <div class="task-checkbox" onclick="toggleTaskCheck(this)">
-                <svg viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
-            </div>
-            <div style="flex: 1;">
-                <div class="task-title">Подготовить презентацию</div>
-                <div class="task-meta">
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                        10:00
-                    </span>
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                        </svg>
-                        Работа
-                    </span>
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                        </svg>
-                        30 мин
-                    </span>
-                </div>
-            </div>
-            <div class="task-actions">
-                <div class="task-action" onclick="postponeTask(this)">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                </div>
-                <div class="task-action" onclick="startFocusForTask(this)">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        
-        <div class="task-card">
-            <div class="task-priority high"></div>
-            <div class="task-checkbox" onclick="toggleTaskCheck(this)">
-                <svg viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
-            </div>
-            <div style="flex: 1;">
-                <div class="task-title">Позвонить клиенту</div>
-                <div class="task-meta">
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                        11:30
-                    </span>
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                        </svg>
-                        Продажи
-                    </span>
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                        </svg>
-                        15 мин
-                    </span>
-                </div>
-            </div>
-            <div class="task-actions">
-                <div class="task-action" onclick="postponeTask(this)">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                </div>
-                <div class="task-action" onclick="startFocusForTask(this)">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        
-        <div class="task-card">
-            <div class="task-priority medium"></div>
-            <div class="task-checkbox" onclick="toggleTaskCheck(this)">
-                <svg viewBox="0 0 24 24">
-                    <polyline points="20 6 9 17 4 12"/>
-                </svg>
-            </div>
-            <div style="flex: 1;">
-                <div class="task-title">Обзор кода PR #234</div>
-                <div class="task-meta">
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                        </svg>
-                        14:00
-                    </span>
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-                        </svg>
-                        Разработка
-                    </span>
-                    <span class="task-chip">
-                        <svg viewBox="0 0 24 24" stroke="currentColor" fill="none">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                        </svg>
-                        45 мин
-                    </span>
-                </div>
-            </div>
-            <div class="task-actions">
-                <div class="task-action" onclick="postponeTask(this)">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <polyline points="12 6 12 12 16 14"/>
-                    </svg>
-                </div>
-                <div class="task-action" onclick="startFocusForTask(this)">
-                    <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10"/>
-                        <circle cx="12" cy="12" r="3"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Мотивационная карточка -->
-        <div class="motivation-card">
-            <div class="motivation-emoji">💪</div>
-            <div class="motivation-text">Отличный темп!</div>
-            <div class="motivation-subtext">Вы на 30% продуктивнее, чем обычно в понедельник</div>
-        </div>
-    </div>
-    
-    <!-- Нижняя навигация -->
-    <div class="bottom-nav">
-        <div class="nav-item active">
-            <div class="nav-icon">
-                <svg viewBox="0 0 24 24">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
-                </svg>
-            </div>
-            <div class="nav-label">HOME</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">
-                <svg viewBox="0 0 24 24">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-            </div>
-            <div class="nav-label">FINANCE</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">
-                <svg viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
-            </div>
-            <div class="nav-label">PLANNER</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 16v-4"/>
-                    <path d="M12 8h.01"/>
-                </svg>
-            </div>
-            <div class="nav-label">INSIGHTS</div>
-        </div>
-        <div class="nav-item">
-            <div class="nav-icon">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M12 1v6m0 6v6m4.22-13.22l4.24 4.24M1.54 9.96l4.24 4.24M6.34 17.66l-4.24 4.24"/>
-                </svg>
-            </div>
-            <div class="nav-label">MORE</div>
-        </div>
-    </div>
-    
-    <!-- FAB кнопка -->
-    <div class="fab" id="fab" onclick="toggleFab()">
-        <span class="fab-icon">
-            <svg viewBox="0 0 24 24">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-        </span>
-    </div>
-    
-    <!-- FAB меню -->
-    <div class="fab-menu" id="fabMenu">
-        <div class="fab-option" onclick="quickTask()">
-            <span class="fab-option-icon">
-                <svg viewBox="0 0 24 24">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                </svg>
-            </span>
-            <span class="fab-option-text">Быстрая задача</span>
-        </div>
-        <div class="fab-option" onclick="quickExpense()">
-            <span class="fab-option-icon">
-                <svg viewBox="0 0 24 24">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-            </span>
-            <span class="fab-option-text">Быстрый расход</span>
-        </div>
-        <div class="fab-option" onclick="startQuickFocus()">
-            <span class="fab-option-icon">
-                <svg viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
-            </span>
-            <span class="fab-option-text">Начать фокус</span>
-        </div>
-        <div class="fab-option" onclick="voiceInput()">
-            <span class="fab-option-icon">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                    <line x1="12" y1="19" x2="12" y2="23"/>
-                </svg>
-            </span>
-            <span class="fab-option-text">Голосовой ввод</span>
-        </div>
-    </div>
-    
-    <script>
-        // Функция переключения темы
-        function toggleTheme() {
-            const body = document.body;
-            const currentTheme = body.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const points = [];
             
-            body.setAttribute('data-theme', newTheme);
-            
-            // Обновляем иконку темы
-            const themeIcon = document.getElementById('themeIcon');
-            if (newTheme === 'light') {
-                // Иконка солнца для светлой темы
-                themeIcon.innerHTML = `
-                    <circle cx="12" cy="12" r="5"/>
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                `;
-            } else {
-                // Иконка луны для темной темы
-                themeIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+            for (let i = 0; i <= numPoints; i++) {
+              const t = i / numPoints;
+              const x = startX + t * waveWidth;
+
+              // Главная волна - направление зависит от timeDirection
+              const wave1 = Math.sin(t * PI * 2.8 + time * speedVariation * timeDirection + phaseOffset) 
+                           * (35 + intensity * 25) * amplitudeVariation;
+              
+              // Вторая гармоника
+              const wave2 = Math.sin(t * PI * 1.8 - time * 0.7 * timeDirection + phaseOffset * 0.6) 
+                           * (20 + intensity * 15) * amplitudeVariation;
+              
+              // Третья гармоника
+              const wave3 = Math.sin(t * PI * 4.5 + time * 1.3 * timeDirection + lineT * PI * 2) 
+                           * (8 + intensity * 6);
+
+              const envelope = Math.pow(Math.sin(t * PI), 0.9);
+              const waveY = (wave1 + wave2 + wave3) * envelope;
+              const y = cy + waveY + verticalShift;
+
+              points.push({ x, y, t });
             }
             
-            // Сохраняем выбор в localStorage
-            localStorage.setItem('theme', newTheme);
+            lines.push({
+              points,
+              lineT,
+              baseAlpha: 0.15 + Math.sin(lineT * PI) * 0.35
+            });
+          }
+          return lines;
         }
-        
-        // Загружаем сохраненную тему при загрузке страницы
-        window.onload = function() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-            document.body.setAttribute('data-theme', savedTheme);
+
+        // Лента 1: Cyan, движется вправо (+1)
+        const cyanRibbon = generateRibbon(1, -15);
+        // Лента 2: Pink, движется влево (-1)
+        const pinkRibbon = generateRibbon(-1, 15);
+
+        // Функция отрисовки сегмента ленты с градиентом к purple в центре
+        function drawRibbonSegment(ribbon, baseColor, toColor, start, end) {
+          for (const line of ribbon) {
+            ctx.lineWidth = 0.6;
             
-            // Устанавливаем правильную иконку
-            const themeIcon = document.getElementById('themeIcon');
-            if (savedTheme === 'light') {
-                themeIcon.innerHTML = `
-                    <circle cx="12" cy="12" r="5"/>
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-                `;
+            for (let i = start; i < end && i < line.points.length - 1; i++) {
+              const pt1 = line.points[i];
+              const pt2 = line.points[i + 1];
+              
+              // Градиент по X: края = baseColor, центр = purple
+              const centerT = Math.abs(pt1.t - 0.5) * 2; // 0 в центре, 1 по краям
+              const color = lerpColor(toColor, baseColor, centerT);
+              
+              const alpha = line.baseAlpha * opacityMultiplier;
+              ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
+              ctx.beginPath();
+              ctx.moveTo(pt1.x, pt1.y);
+              ctx.lineTo(pt2.x, pt2.y);
+              ctx.stroke();
             }
+          }
+        }
+
+        // Рисуем ленты с переплетением (чередуем сегменты)
+        const segments = 6;
+        const pointsPerSegment = Math.floor(numPoints / segments);
+
+        for (let seg = 0; seg < segments; seg++) {
+          const startIdx = seg * pointsPerSegment;
+          const endIdx = Math.min((seg + 1) * pointsPerSegment, numPoints);
+
+          // Чередуем порядок отрисовки для эффекта переплетения
+          if (seg % 2 === 0) {
+            drawRibbonSegment(pinkRibbon, pinkColor, purpleColor, startIdx, endIdx);
+            drawRibbonSegment(cyanRibbon, cyanColor, purpleColor, startIdx, endIdx);
+          } else {
+            drawRibbonSegment(cyanRibbon, cyanColor, purpleColor, startIdx, endIdx);
+            drawRibbonSegment(pinkRibbon, pinkColor, purpleColor, startIdx, endIdx);
+          }
+        }
+
+        // ====== ПУНКТИРНЫЕ ЦЕНТРАЛЬНЫЕ ЛИНИИ ======
+        ctx.setLineDash([6, 10]);
+        ctx.lineWidth = 1.0;
+        
+        const dashedOpacity = (mode === 'idle') ? 0.25 : 0.6;
+
+        // Пунктирная линия для cyan ленты
+        ctx.beginPath();
+        for (let i = 0; i <= numPoints; i++) {
+          const t = i / numPoints;
+          const x = startX + t * waveWidth;
+          const wave1 = Math.sin(t * PI * 2.8 + time * 1.2) * (25 + intensity * 18);
+          const wave2 = Math.sin(t * PI * 1.8 - time * 0.5) * (15 + intensity * 12);
+          const envelope = Math.pow(Math.sin(t * PI), 0.9);
+          const waveY = (wave1 + wave2) * envelope * 0.5;
+          const y = cy + waveY - 15;
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
         
-        // Переключение FAB меню
-        function toggleFab() {
-            const fab = document.getElementById('fab');
-            const fabMenu = document.getElementById('fabMenu');
-            
-            fab.classList.toggle('open');
-            fabMenu.classList.toggle('open');
+        const cyanGradient = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
+        cyanGradient.addColorStop(0, `rgba(77, 208, 255, ${dashedOpacity})`);
+        cyanGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.9})`);
+        cyanGradient.addColorStop(1, `rgba(77, 208, 255, ${dashedOpacity})`);
+        ctx.strokeStyle = cyanGradient;
+        ctx.stroke();
+
+        // Пунктирная линия для pink ленты
+        ctx.beginPath();
+        for (let i = 0; i <= numPoints; i++) {
+          const t = i / numPoints;
+          const x = startX + t * waveWidth;
+          const wave1 = Math.sin(t * PI * 2.8 - time * 1.2) * (25 + intensity * 18);
+          const wave2 = Math.sin(t * PI * 1.8 + time * 0.5) * (15 + intensity * 12);
+          const envelope = Math.pow(Math.sin(t * PI), 0.9);
+          const waveY = (wave1 + wave2) * envelope * 0.5;
+          const y = cy + waveY + 15;
+
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
         }
         
-        // Отметка задачи как выполненной
-        function toggleTaskCheck(checkbox) {
-            checkbox.classList.toggle('checked');
-            if (checkbox.classList.contains('checked')) {
-                const taskCard = checkbox.closest('.task-card');
-                taskCard.style.opacity = '0.6';
-                showToast('✅ Задача выполнена!');
-            } else {
-                const taskCard = checkbox.closest('.task-card');
-                taskCard.style.opacity = '1';
-            }
-        }
+        const pinkGradient = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
+        pinkGradient.addColorStop(0, `rgba(255, 101, 230, ${dashedOpacity})`);
+        pinkGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.9})`);
+        pinkGradient.addColorStop(1, `rgba(255, 101, 230, ${dashedOpacity})`);
+        ctx.strokeStyle = pinkGradient;
+        ctx.stroke();
         
-        // Показ toast уведомлений
-        function showToast(message) {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.style.animation = 'slideDown 0.3s ease';
-                setTimeout(() => toast.remove(), 300);
-            }, 2000);
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+
+      function animate() {
+        // Скорость анимации зависит от режима
+        const timeSpeed = (state.mode === 'idle') ? 0.25 : 1.3;
+        state.time += timeSpeed / 60;
+
+        if (state.mode === 'mic' && analyser && timeData) {
+          analyser.getByteTimeDomainData(timeData);
+          let sumOfSquares = 0;
+          const dataLength = timeData.length;
+
+          for (let i = 0; i < dataLength; i++) {
+            const normalized = (timeData[i] - 128) / 128;
+            sumOfSquares += normalized * normalized;
+          }
+
+          const rms = Math.sqrt(sumOfSquares / dataLength);
+          const target = clamp((rms - 0.01) * 4.5, 0, 1);
+          state.targetAmp = lerp(0.12, 0.95, target);
+        } else if (state.mode === 'idle') {
+          // Idle: почти горизонтальные волны, минимальное движение
+          const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5; // 0 to 1
+          state.targetAmp = 0.02 + breathe * 0.04; // очень маленькая амплитуда
+        } else {
+          // Active: энергичная анимация
+          const breathe = Math.sin(state.time * 0.8);
+          state.targetAmp = 0.9 + breathe * 0.12;
         }
-        
-        // Обработчики действий
-        function showTaskDetails() { showToast('📊 Открываю детали задач...'); }
-        function toggleFocus() { showToast('🎯 Фокус-сессия начата'); }
-        function showFinanceDetails() { showToast('💰 Открываю финансовую сводку...'); }
-        function startPreparation() { showToast('🚀 Начинаю подготовку к встрече...'); }
-        function showDetails() { showToast('📋 Загружаю детали...'); }
-        function setLimit() { showToast('🚫 Устанавливаю лимит на вечер...'); }
-        function showAnalytics() { showToast('📊 Открываю аналитику...'); }
-        function showAllTasks() { showToast('📅 Показываю все задачи...'); }
-        function postponeTask() { showToast('🕓 Задача отложена на 30 минут'); }
-        function startFocusForTask() { showToast('🎯 Запускаю фокус для задачи...'); }
-        function quickTask() { toggleFab(); showToast('📝 Создание быстрой задачи...'); }
-        function quickExpense() { toggleFab(); showToast('💸 Добавление расхода...'); }
-        function startQuickFocus() { toggleFab(); showToast('🎯 Запуск фокус-сессии...'); }
-        function voiceInput() { toggleFab(); showToast('🎤 Слушаю...'); }
-        function showSearch() { showToast('🔍 Поиск...'); }
-        function showNotifications() { showToast('🔔 Уведомления'); }
-    </script>
+
+        // Более плавное сглаживание в idle режиме
+        const smoothing = (state.mode === 'idle') ? 0.08 : 0.2;
+        state.amp += (state.targetAmp - state.amp) * smoothing;
+
+        const canvasWidth = canvas.clientWidth || 540;
+        const canvasHeight = canvas.clientHeight || 540;
+        const centerX = canvasWidth / 2;
+        const centerY = canvasHeight / 2;
+        const radius = Math.min(canvasWidth, canvasHeight) * 0.46;
+
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+        fillSphereBase(centerX, centerY, radius);
+        drawInterweavingWaves(centerX, centerY, radius, state.time, state.amp, state.mode);
+        addGleams(centerX, centerY, radius);
+
+        requestAnimationFrame(animate);
+      }
+
+      requestAnimationFrame(animate);
+
+      // UI
+      const idleBtn = document.getElementById('idle');
+      const activeBtn = document.getElementById('active');
+      const micBtn = document.getElementById('mic');
+      const msg = document.getElementById('msg');
+
+      function setPressed(btn, pressed) {
+        btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+      }
+
+      async function startMic() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          micStream = stream;
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          audioCtx = new AudioContext();
+          const source = audioCtx.createMediaStreamSource(stream);
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 1024;
+          analyser.smoothingTimeConstant = 0.9;
+          source.connect(analyser);
+          timeData = new Uint8Array(analyser.frequencyBinCount);
+          msg.textContent = 'Mic on';
+          state.mode = 'mic';
+          setPressed(idleBtn, false);
+          setPressed(activeBtn, false);
+          setPressed(micBtn, true);
+        } catch (error) {
+          msg.textContent = 'No mic access';
+          state.mode = 'active';
+          setPressed(idleBtn, false);
+          setPressed(activeBtn, true);
+          setPressed(micBtn, false);
+        }
+      }
+
+      function stopMic() {
+        if (micStream) {
+          micStream.getTracks().forEach(track => track.stop());
+          micStream = null;
+        }
+        if (audioCtx) {
+          audioCtx.close();
+          audioCtx = null;
+        }
+        analyser = null;
+        timeData = null;
+      }
+
+      idleBtn.addEventListener('click', () => {
+        stopMic();
+        state.mode = 'idle';
+        setPressed(idleBtn, true);
+        setPressed(activeBtn, false);
+        setPressed(micBtn, false);
+        msg.textContent = '';
+      });
+
+      activeBtn.addEventListener('click', () => {
+        stopMic();
+        state.mode = 'active';
+        setPressed(idleBtn, false);
+        setPressed(activeBtn, true);
+        setPressed(micBtn, false);
+        msg.textContent = '';
+      });
+
+      micBtn.addEventListener('click', () => {
+        if (state.mode === 'mic') {
+          stopMic();
+          state.mode = 'idle';
+          setPressed(idleBtn, true);
+          setPressed(activeBtn, false);
+          setPressed(micBtn, false);
+          msg.textContent = '';
+        } else {
+          startMic();
+        }
+      });
+
+      window.addEventListener('pagehide', stopMic);
+    })();
+  </script>
 </body>
 </html>
