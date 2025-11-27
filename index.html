@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LEORA Voice Wave — Interweaving Ribbons</title>
+  <title>LEORA Voice Wave — Pulse Effect</title>
   <style>
     :root { color-scheme: dark; }
 
@@ -182,7 +182,15 @@
         amp: 0.18,
         targetAmp: 0.18,
         time: 0,
-        smoothedRms: 0,  // Сглаженный уровень звука
+        smoothedRms: 0,
+        
+        // === НОВЫЕ ПАРАМЕТРЫ ДЛЯ ПУЛЬСА ===
+        pulsePhase: 0,        // Фаза текущего пульса (0-1)
+        pulseActive: false,   // Активен ли пульс сейчас
+        pulseDecay: 0,        // Затухание после пульса
+        lastSoundTime: 0,     // Когда последний раз был звук
+        pulseIntensity: 0,    // Интенсивность текущего пульса
+        timeSpeed: 0,         // Скорость движения волн
       };
 
       let audioCtx = null;
@@ -282,7 +290,7 @@
       }
 
       // ---------------------------------------------------------------------
-      // ДВЕ ЛЕНТЫ: Cyan и Pink, при наложении = Purple
+      // ДВЕ ЛЕНТЫ: Cyan и Pink с эффектом пульса
       // ---------------------------------------------------------------------
       function drawInterweavingWaves(cx, cy, r, time, intensity, mode) {
         const waveWidth = r * 2.1;
@@ -290,7 +298,6 @@
         const numPoints = 180;
         const maxWaveHeight = r * 0.7;
         
-        // Одинаковая яркость во всех режимах
         const opacityMultiplier = 1.0;
 
         ctx.save();
@@ -318,25 +325,20 @@
               const t = i / numPoints;
               const x = startX + t * waveWidth;
 
-              // Масштабируем всю амплитуду на intensity
               const ampScale = intensity;
 
-              // Главная волна - направление зависит от timeDirection
               const wave1 = Math.sin(t * PI * 2.8 + time * speedVariation * timeDirection + phaseOffset) 
                            * 60 * amplitudeVariation * ampScale;
               
-              // Вторая гармоника
               const wave2 = Math.sin(t * PI * 1.8 - time * 0.7 * timeDirection + phaseOffset * 0.6) 
                            * 35 * amplitudeVariation * ampScale;
               
-              // Третья гармоника
               const wave3 = Math.sin(t * PI * 4.5 + time * 1.3 * timeDirection + lineT * PI * 2) 
                            * 14 * ampScale;
 
               const envelope = Math.pow(Math.sin(t * PI), 0.9);
               const waveY = (wave1 + wave2 + wave3) * envelope;
               
-              // Вертикальное смещение тоже масштабируем
               const scaledVerticalShift = verticalShift * ampScale;
               const y = cy + waveY + scaledVerticalShift;
 
@@ -352,12 +354,9 @@
           return lines;
         }
 
-        // Лента 1: Cyan, движется вправо (+1)
         const cyanRibbon = generateRibbon(1, -15);
-        // Лента 2: Pink, движется влево (-1)
         const pinkRibbon = generateRibbon(-1, 15);
 
-        // Функция отрисовки сегмента ленты с градиентом к purple в центре
         function drawRibbonSegment(ribbon, baseColor, toColor, start, end) {
           for (const line of ribbon) {
             ctx.lineWidth = 0.6;
@@ -366,8 +365,7 @@
               const pt1 = line.points[i];
               const pt2 = line.points[i + 1];
               
-              // Градиент по X: края = baseColor, центр = purple
-              const centerT = Math.abs(pt1.t - 0.5) * 2; // 0 в центре, 1 по краям
+              const centerT = Math.abs(pt1.t - 0.5) * 2;
               const color = lerpColor(toColor, baseColor, centerT);
               
               const alpha = line.baseAlpha * opacityMultiplier;
@@ -380,7 +378,6 @@
           }
         }
 
-        // Рисуем ленты с переплетением (чередуем сегменты)
         const segments = 6;
         const pointsPerSegment = Math.floor(numPoints / segments);
 
@@ -388,7 +385,6 @@
           const startIdx = seg * pointsPerSegment;
           const endIdx = Math.min((seg + 1) * pointsPerSegment, numPoints);
 
-          // Чередуем порядок отрисовки для эффекта переплетения
           if (seg % 2 === 0) {
             drawRibbonSegment(pinkRibbon, pinkColor, purpleColor, startIdx, endIdx);
             drawRibbonSegment(cyanRibbon, cyanColor, purpleColor, startIdx, endIdx);
@@ -404,7 +400,6 @@
         
         const dashedOpacity = 0.6;
 
-        // Пунктирная линия для cyan ленты
         ctx.beginPath();
         for (let i = 0; i <= numPoints; i++) {
           const t = i / numPoints;
@@ -426,7 +421,6 @@
         ctx.strokeStyle = cyanGradient;
         ctx.stroke();
 
-        // Пунктирная линия для pink ленты
         ctx.beginPath();
         for (let i = 0; i <= numPoints; i++) {
           const t = i / numPoints;
@@ -452,7 +446,10 @@
         ctx.restore();
       }
 
+      // === ГЛАВНЫЙ ЦИКЛ АНИМАЦИИ С ПУЛЬСОМ ===
       function animate() {
+        const now = performance.now();
+        
         if (state.mode === 'mic' && analyser && timeData) {
           analyser.getByteTimeDomainData(timeData);
           let sumOfSquares = 0;
@@ -465,39 +462,73 @@
 
           const rms = Math.sqrt(sumOfSquares / dataLength);
           
-          // Быстрое сглаживание для отзывчивости
-          state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.25;
+          // Сглаживание RMS
+          state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.3;
           
-          const silenceThreshold = 0.008;
+          const silenceThreshold = 0.012;
+          const soundDetected = state.smoothedRms > silenceThreshold;
           
-          if (state.smoothedRms > silenceThreshold) {
-            // Есть звук - волны разворачиваются
-            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 12, 0, 1);
-            state.targetAmp = lerp(0.4, 1.0, soundLevel);
-            state.time += 1.5 / 60;
-            // Быстрое появление волн
-            state.amp += (state.targetAmp - state.amp) * 0.25;
+          if (soundDetected) {
+            // === ЗВУК ОБНАРУЖЕН - ПУЛЬС АКТИВИРУЕТСЯ ===
+            state.lastSoundTime = now;
+            state.pulseActive = true;
+            
+            // Интенсивность пульса зависит от громкости
+            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 8, 0, 1);
+            
+            // Быстрое нарастание пульса
+            state.pulseIntensity = lerp(state.pulseIntensity, 0.5 + soundLevel * 0.5, 0.3);
+            
+            // Скорость движения волн увеличивается
+            state.timeSpeed = lerp(state.timeSpeed, 1.5 + soundLevel * 1.0, 0.25);
+            
+            // Целевая амплитуда
+            state.targetAmp = 0.6 + soundLevel * 0.4;
+            
           } else {
-            // Тишина - волны максимально сжаты (почти прямая линия)
-            state.targetAmp = 0.02; // Минимальная видимость
-            // Плавное затухание
-            state.amp += (state.targetAmp - state.amp) * 0.06;
-            // Очень медленное движение
-            state.time += 0.1 / 60;
+            // === ТИШИНА - ПУЛЬС ЗАТУХАЕТ ===
+            const timeSinceSound = now - state.lastSoundTime;
+            
+            // Фаза затухания (0-1 за 800мс)
+            const decayProgress = clamp(timeSinceSound / 800, 0, 1);
+            
+            // Плавное затухание пульса
+            state.pulseIntensity = lerp(state.pulseIntensity, 0, 0.08);
+            
+            // Скорость движения замедляется
+            state.timeSpeed = lerp(state.timeSpeed, 0.1, 0.05);
+            
+            // Амплитуда уменьшается до минимума
+            state.targetAmp = lerp(state.targetAmp, 0.05, 0.04);
+            
+            // После полного затухания - почти полная остановка
+            if (decayProgress > 0.9) {
+              state.pulseActive = false;
+              state.timeSpeed = lerp(state.timeSpeed, 0.02, 0.1);
+            }
           }
           
+          // Обновляем время с учётом скорости
+          state.time += state.timeSpeed / 60;
+          
+          // Плавное изменение амплитуды
+          state.amp = lerp(state.amp, state.targetAmp, 0.15);
+          
         } else if (state.mode === 'idle') {
-          // Idle - очень плоские волны с минимальным движением
+          // Idle - минимальное движение
           state.targetAmp = 0.03;
           state.time += 0.1 / 60;
           state.amp += (state.targetAmp - state.amp) * 0.05;
+          
         } else if (state.mode === 'analysis') {
-          // Analysis - ИИ анализирует, заметное движение волн
+          // Analysis - плавное "дыхание"
           const breathe = Math.sin(state.time * 0.8) * 0.5 + 0.5;
-          state.targetAmp = 0.12 + breathe * 0.06; // Более заметные волны
-          state.time += 0.6 / 60; // Быстрее движение
+          state.targetAmp = 0.12 + breathe * 0.06;
+          state.time += 0.6 / 60;
           state.amp += (state.targetAmp - state.amp) * 0.1;
+          
         } else {
+          // Active - постоянное активное движение
           const breathe = Math.sin(state.time * 0.8);
           state.targetAmp = 0.9 + breathe * 0.12;
           state.time += 1.3 / 60;
@@ -513,7 +544,7 @@
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
         fillSphereBase(centerX, centerY, radius);
-        drawInterweavingWaves(centerX, centerY, radius, state.time, state.amp, 'active');
+        drawInterweavingWaves(centerX, centerY, radius, state.time, state.amp, state.mode);
         addGleams(centerX, centerY, radius);
 
         requestAnimationFrame(animate);
@@ -541,10 +572,17 @@
           const source = audioCtx.createMediaStreamSource(stream);
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 1024;
-          analyser.smoothingTimeConstant = 0.9;
+          analyser.smoothingTimeConstant = 0.85;
           source.connect(analyser);
           timeData = new Uint8Array(analyser.frequencyBinCount);
-          msg.textContent = 'Mic on';
+          
+          // Сброс состояния пульса при старте
+          state.pulseIntensity = 0;
+          state.timeSpeed = 0.1;
+          state.lastSoundTime = 0;
+          state.pulseActive = false;
+          
+          msg.textContent = 'Mic on — speak!';
           state.mode = 'mic';
           setPressed(idleBtn, false);
           setPressed(analysisBtn, false);
