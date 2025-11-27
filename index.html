@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LEORA Voice Wave — Standing Wave + Flow + Pulse</title>
+  <title>LEORA Voice Wave — Ultra Optimized</title>
   <style>
     :root { color-scheme: dark; }
 
@@ -153,8 +153,8 @@
     <div class="orb-shell">
       <canvas id="sphere"></canvas>
       <div class="labels">
-        <div class="title">LISTENING</div>
-        <div class="subtitle">Speak naturally</div>
+        <div class="title" id="title">LISTENING</div>
+        <div class="subtitle" id="subtitle">Speak naturally</div>
       </div>
     </div>
 
@@ -172,9 +172,11 @@
       'use strict';
 
       const canvas = document.getElementById('sphere');
-      const ctx = canvas.getContext('2d', { alpha: true });
+      const ctx = canvas.getContext('2d', { alpha: true, desynchronized: true });
+      const titleEl = document.getElementById('title');
+      const subtitleEl = document.getElementById('subtitle');
 
-      const DPR_MAX = 2;
+      const DPR_MAX = 1.5;
       let dpr = Math.min(DPR_MAX, window.devicePixelRatio || 1);
 
       const state = {
@@ -182,15 +184,76 @@
         amp: 0.05,
         targetAmp: 0.05,
         smoothedRms: 0,
-        time: 0,           // Время для движения волн
-        timeSpeed: 0,      // Скорость движения
+        time: 0,
+        timeSpeed: 0,
         targetTimeSpeed: 0,
+        analysisStartTime: 0,
+        analysisPhase: 'analyzing',
+        morphProgress: 0,
+        lastLabelUpdate: 0,
+        currentTitle: '',
+        currentSubtitle: '',
       };
+
+      const ANALYSIS_DURATION = 3000;
+      const MORPH_DURATION = 1200;
+      const LABEL_UPDATE_INTERVAL = 200; // Обновляем лейблы только раз в 200мс
+      
+      const NUM_LINES = 16;
+      const NUM_POINTS = 60;
 
       let audioCtx = null;
       let analyser = null;
       let micStream = null;
       let timeData = null;
+
+      const TAU = Math.PI * 2;
+      const PI = Math.PI;
+
+      // Предрассчитанные данные
+      const lineData = [];
+      const pointData = [];
+      
+      // Кэшированные градиенты
+      const gradientCache = {
+        waveTop: null,
+        waveBottom: null,
+        checkTop: null,
+        checkBottom: null,
+        needsUpdate: true,
+      };
+      
+      function precalcData() {
+        lineData.length = 0;
+        for (let i = 0; i < NUM_LINES; i++) {
+          const t = i / (NUM_LINES - 1);
+          lineData.push({
+            t,
+            phase: t * PI * 2.2 + Math.sin(t * PI * 2.5) * 0.6,
+            ampVar: 0.5 + Math.sin(t * PI * 2 + 0.3) * 0.5,
+            vSpread: (t - 0.5) * 50,
+            speed: 0.8 + t * 0.4,
+            alpha: 0.15 + Math.sin(t * PI) * 0.45,
+          });
+        }
+        
+        pointData.length = 0;
+        for (let i = 0; i <= NUM_POINTS; i++) {
+          const t = i / NUM_POINTS;
+          const nodes = Math.abs(Math.cos(t * PI * 3));
+          pointData.push({
+            t,
+            env: 0.15 + nodes * 0.85,
+          });
+        }
+      }
+      precalcData();
+
+      // Цвета
+      const cyanColor = [77, 208, 255];
+      const purpleColor = [164, 91, 255];
+      const pinkColor = [255, 101, 230];
+      const blueColor = [59, 130, 246];
 
       function setCanvasSize() {
         const wCss = canvas.clientWidth || 540;
@@ -199,322 +262,366 @@
         canvas.width = Math.floor(wCss * dpr);
         canvas.height = Math.floor(hCss * dpr);
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        gradientCache.needsUpdate = true;
       }
 
       const resizeObserver = new ResizeObserver(setCanvasSize);
       resizeObserver.observe(canvas);
       setCanvasSize();
 
-      const TAU = Math.PI * 2;
-      const PI = Math.PI;
       const lerp = (a, b, t) => a + (b - a) * t;
       const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
+      const easeInOutCubic = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-      const cyanColor = { r: 77, g: 208, b: 255 };
-      const purpleColor = { r: 164, g: 91, b: 255 };
-      const pinkColor = { r: 255, g: 101, b: 230 };
+      function createGradients(cx, cy, r) {
+        const waveWidth = r * 2.1;
+        const startX = cx - r * 1.05;
 
-      function lerpColor(color1, color2, t) {
-        const r = Math.round(color1.r + (color2.r - color1.r) * t);
-        const g = Math.round(color1.g + (color2.g - color1.g) * t);
-        const b = Math.round(color1.b + (color2.b - color1.b) * t);
-        return { r, g, b };
+        const gradTop = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
+        gradTop.addColorStop(0, `rgba(${cyanColor.join(',')}, 1)`);
+        gradTop.addColorStop(0.35, `rgba(${purpleColor.join(',')}, 1)`);
+        gradTop.addColorStop(0.5, `rgba(${purpleColor.join(',')}, 1)`);
+        gradTop.addColorStop(0.65, `rgba(${purpleColor.join(',')}, 1)`);
+        gradTop.addColorStop(1, `rgba(${cyanColor.join(',')}, 1)`);
+        
+        const gradBottom = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
+        gradBottom.addColorStop(0, `rgba(${pinkColor.join(',')}, 1)`);
+        gradBottom.addColorStop(0.35, `rgba(${purpleColor.join(',')}, 1)`);
+        gradBottom.addColorStop(0.5, `rgba(${purpleColor.join(',')}, 1)`);
+        gradBottom.addColorStop(0.65, `rgba(${purpleColor.join(',')}, 1)`);
+        gradBottom.addColorStop(1, `rgba(${pinkColor.join(',')}, 1)`);
+
+        const gradCheckTop = ctx.createLinearGradient(
+          cx - r * 0.5, cy + r * 0.4,
+          cx + r * 0.5, cy - r * 0.4
+        );
+        gradCheckTop.addColorStop(0, `rgba(${pinkColor.join(',')}, 1)`);
+        gradCheckTop.addColorStop(0.3, `rgba(${purpleColor.join(',')}, 1)`);
+        gradCheckTop.addColorStop(0.5, `rgba(${blueColor.join(',')}, 1)`);
+        gradCheckTop.addColorStop(0.7, `rgba(${cyanColor.join(',')}, 1)`);
+        gradCheckTop.addColorStop(1, `rgba(${cyanColor.join(',')}, 1)`);
+        
+        const gradCheckBottom = ctx.createLinearGradient(
+          cx - r * 0.5, cy + r * 0.4,
+          cx + r * 0.5, cy - r * 0.4
+        );
+        gradCheckBottom.addColorStop(0, `rgba(${pinkColor.join(',')}, 1)`);
+        gradCheckBottom.addColorStop(0.3, `rgba(${purpleColor.join(',')}, 1)`);
+        gradCheckBottom.addColorStop(0.5, `rgba(${blueColor.join(',')}, 1)`);
+        gradCheckBottom.addColorStop(0.7, `rgba(${cyanColor.join(',')}, 1)`);
+        gradCheckBottom.addColorStop(1, `rgba(${cyanColor.join(',')}, 1)`);
+
+        return {
+          waveTop: gradTop,
+          waveBottom: gradBottom,
+          checkTop: gradCheckTop,
+          checkBottom: gradCheckBottom,
+        };
       }
 
       function fillSphereBase(cx, cy, r) {
-        const gradient = ctx.createRadialGradient(cx, cy * 0.7, r * 0.06, cx, cy, r);
-        gradient.addColorStop(0.0, '#0f1520');
-        gradient.addColorStop(0.35, '#0b1220');
-        gradient.addColorStop(0.7, '#070e18');
-        gradient.addColorStop(1.0, '#040710');
-
+        const gradient = ctx.createRadialGradient(cx, cy, r * 0.1, cx, cy, r);
+        gradient.addColorStop(0.0, '#12161f');
+        gradient.addColorStop(0.6, '#0a0d14');
+        gradient.addColorStop(1.0, '#050709');
         ctx.fillStyle = gradient;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, TAU);
         ctx.fill();
+
+        ctx.strokeStyle = 'rgba(120, 140, 180, 0.12)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r - 1, 0, TAU);
+        ctx.stroke();
       }
 
       function addGleams(cx, cy, r) {
         ctx.save();
         ctx.globalCompositeOperation = 'screen';
 
-        const colorGleam = ctx.createRadialGradient(
-          cx - r * 0.5, cy + r * 0.5, r * 0.05,
-          cx - r * 0.3, cy + r * 0.4, r * 0.6
+        const highlight = ctx.createRadialGradient(
+          cx - r * 0.3, cy - r * 0.4, r * 0.02,
+          cx - r * 0.1, cy - r * 0.2, r * 0.6
         );
-        colorGleam.addColorStop(0.0, 'rgba(255, 140, 90, 0.25)');
-        colorGleam.addColorStop(0.5, 'rgba(200, 100, 150, 0.15)');
-        colorGleam.addColorStop(1.0, 'rgba(0,0,0,0)');
-
-        ctx.fillStyle = colorGleam;
+        highlight.addColorStop(0.0, 'rgba(255, 255, 255, 0.18)');
+        highlight.addColorStop(0.3, 'rgba(255, 255, 255, 0.05)');
+        highlight.addColorStop(1.0, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = highlight;
         ctx.beginPath();
         ctx.arc(cx, cy, r, 0, TAU);
-        ctx.fill();
-
-        const rightGleam = ctx.createRadialGradient(
-          cx + r * 0.5, cy + r * 0.3, r * 0.05,
-          cx + r * 0.4, cy + r * 0.2, r * 0.5
-        );
-        rightGleam.addColorStop(0.0, 'rgba(100, 120, 255, 0.2)');
-        rightGleam.addColorStop(0.5, 'rgba(150, 100, 200, 0.1)');
-        rightGleam.addColorStop(1.0, 'rgba(0,0,0,0)');
-
-        ctx.fillStyle = rightGleam;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, TAU);
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.ellipse(cx - r * 0.05, cy - r * 0.42, r * 0.9, r * 0.5, -0.12, 0, TAU);
-
-        const whiteGleam = ctx.createRadialGradient(
-          cx - r * 0.25, cy - r * 0.52, r * 0.08,
-          cx - r * 0.05, cy - r * 0.4, r * 0.7
-        );
-        whiteGleam.addColorStop(0.0, 'rgba(255,255,255,0.2)');
-        whiteGleam.addColorStop(0.18, 'rgba(255,255,255,0.08)');
-        whiteGleam.addColorStop(0.4, 'rgba(210,230,255,0.03)');
-        whiteGleam.addColorStop(1.0, 'rgba(0,0,0,0)');
-
-        ctx.fillStyle = whiteGleam;
         ctx.fill();
 
         ctx.restore();
       }
 
-      // ---------------------------------------------------------------------
-      // СТОЯЧАЯ ВОЛНА + ДВИЖЕНИЕ + ПУЛЬС
-      // ---------------------------------------------------------------------
-      function drawFlowingStandingWaves(cx, cy, r, time, intensity) {
+      // Кэш для точек галочки
+      const checkPointCache = new Map();
+      
+      function getCheckPoint(t, cx, cy, r) {
+        const key = `${t.toFixed(3)}_${cx}_${cy}_${r}`;
+        if (checkPointCache.has(key)) return checkPointCache.get(key);
+        
+        const s = r * 0.75;
+        const sx = cx - s * 0.55, sy = cy + s * 0.05;
+        const mx = cx - s * 0.15, my = cy + s * 0.45;
+        const ex = cx + s * 0.55, ey = cy - s * 0.4;
+        
+        let result;
+        if (t < 0.4) {
+          const lt = t / 0.4;
+          result = [lerp(sx, mx, lt), lerp(sy, my, lt)];
+        } else {
+          const lt = (t - 0.4) / 0.6;
+          result = [lerp(mx, ex, lt), lerp(my, ey, lt)];
+        }
+        
+        checkPointCache.set(key, result);
+        return result;
+      }
+
+      function drawWaves(cx, cy, r, time, intensity, morphProgress) {
         const waveWidth = r * 2.1;
         const startX = cx - r * 1.05;
-        const numPoints = 200;
+        const easedMorph = easeInOutCubic(morphProgress);
+
+        // Обновляем градиенты только при необходимости
+        if (gradientCache.needsUpdate) {
+          const grads = createGradients(cx, cy, r);
+          gradientCache.waveTop = grads.waveTop;
+          gradientCache.waveBottom = grads.waveBottom;
+          gradientCache.checkTop = grads.checkTop;
+          gradientCache.checkBottom = grads.checkBottom;
+          gradientCache.needsUpdate = false;
+        }
 
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, r - 1, 0, TAU);
         ctx.clip();
 
-        const numLinesPerRibbon = 70;
+        const gradients = [
+          [gradientCache.waveTop, gradientCache.checkTop],
+          [gradientCache.waveBottom, gradientCache.checkBottom]
+        ];
 
-        // Огибающая стоячей волны - широко по краям, узко в узлах
-        function standingWaveEnvelope(t) {
-          const nodes = Math.abs(Math.cos(t * PI * 3));
-          return 0.15 + nodes * 0.85;
-        }
-
-        function generateRibbon(verticalDirection, baseVerticalOffset, timeDirection) {
-          const lines = [];
+        // Оптимизация: используем Path2D для batch-обработки
+        for (let ribbon = 0; ribbon < 2; ribbon++) {
+          const vDir = ribbon === 0 ? -1 : 1;
+          const baseOff = ribbon === 0 ? -25 : 25;
+          const tDir = ribbon === 0 ? 1 : -1;
           
-          for (let lineIdx = 0; lineIdx < numLinesPerRibbon; lineIdx++) {
-            const lineT = lineIdx / (numLinesPerRibbon - 1);
-            
-            const phaseOffset = lineT * PI * 2.2 + Math.sin(lineT * PI * 2.5) * 0.6;
-            const amplitudeVariation = 0.5 + Math.sin(lineT * PI * 2 + 0.3) * 0.5;
-            const verticalSpread = (lineT - 0.5) * 50;
-            const speedVariation = 0.8 + lineT * 0.4;
-            
-            const points = [];
-            
-            for (let i = 0; i <= numPoints; i++) {
-              const t = i / numPoints;
-              const x = startX + t * waveWidth;
+          const waveGrad = gradients[ribbon][0];
+          const checkGrad = gradients[ribbon][1];
 
-              // Огибающая стоячей волны
-              const envelope = standingWaveEnvelope(t);
+          for (let li = 0; li < NUM_LINES; li++) {
+            const ld = lineData[li];
+            const checkSpread = (ld.t - 0.5) * 12 * (1 - easedMorph * 0.7);
+
+            const path = new Path2D();
+            
+            for (let pi = 0; pi <= NUM_POINTS; pi++) {
+              const pd = pointData[pi];
+              const t = pd.t;
               
-              // Форма волны С ДВИЖЕНИЕМ - time добавляет бегущую составляющую
-              const wave1 = Math.sin(t * PI * 3 + time * speedVariation * timeDirection + phaseOffset) * 70 * amplitudeVariation;
-              const wave2 = Math.sin(t * PI * 2 + time * 0.7 * timeDirection + phaseOffset * 0.6) * 35 * amplitudeVariation;
-              const wave3 = Math.sin(t * PI * 5 + time * 1.2 * timeDirection + lineT * PI * 1.5) * 18;
-
-              const baseWaveY = (wave1 + wave2 + wave3) * envelope;
-              const waveY = baseWaveY * intensity * verticalDirection;
-              const verticalOffset = (baseVerticalOffset + verticalSpread) * intensity * envelope;
+              const w1 = Math.sin(t * PI * 3 + time * ld.speed * tDir + ld.phase) * 70 * ld.ampVar;
+              const w2 = Math.sin(t * PI * 2 + time * 0.7 * tDir + ld.phase * 0.6) * 35 * ld.ampVar;
+              const w3 = Math.sin(t * PI * 5 + time * 1.2 * tDir + ld.t * PI * 1.5) * 18;
+              const waveY = (w1 + w2 + w3) * pd.env;
               
-              const y = cy + waveY + verticalOffset;
+              const wx = startX + t * waveWidth;
+              const wy = cy + waveY * intensity * vDir + (baseOff + ld.vSpread) * intensity * pd.env;
+              
+              const [chkX, chkY] = getCheckPoint(t, cx, cy, r);
+              const fx = lerp(wx, chkX, easedMorph);
+              const fy = lerp(wy, chkY + checkSpread * vDir, easedMorph);
 
-              points.push({ x, y, t, envelope });
+              if (pi === 0) path.moveTo(fx, fy);
+              else path.lineTo(fx, fy);
             }
             
-            lines.push({
-              points,
-              lineT,
-              baseAlpha: 0.1 + Math.sin(lineT * PI) * 0.4
-            });
+            ctx.lineWidth = lerp(0.8, 9, easedMorph);
+            ctx.globalAlpha = ld.alpha * (0.4 + intensity * 0.6) * lerp(1, 1.5, easedMorph);
+            ctx.strokeStyle = easedMorph < 0.5 ? waveGrad : checkGrad;
+            ctx.stroke(path);
           }
-          return lines;
         }
 
-        // Cyan движется в одну сторону, Pink в другую - создаёт эффект переплетения
-        const cyanRibbon = generateRibbon(-1, -25, 1);
-        const pinkRibbon = generateRibbon(1, 25, -1);
+        ctx.globalAlpha = 1;
 
-        function drawRibbonSegment(ribbon, baseColor, toColor, start, end) {
-          for (const line of ribbon) {
-            ctx.lineWidth = 0.55;
-            
-            for (let i = start; i < end && i < line.points.length - 1; i++) {
-              const pt1 = line.points[i];
-              const pt2 = line.points[i + 1];
+        // Пунктир (только если нужен)
+        if (morphProgress < 0.5) {
+          const dashAlpha = (1 - morphProgress * 2) * (0.4 + intensity * 0.3);
+          ctx.setLineDash([6, 10]);
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = dashAlpha;
+
+          for (let ribbon = 0; ribbon < 2; ribbon++) {
+            const vDir = ribbon === 0 ? -1 : 1;
+            const tDir = ribbon === 0 ? 1 : -1;
+            const color = ribbon === 0 ? cyanColor : pinkColor;
+
+            const path = new Path2D();
+            ctx.strokeStyle = `rgb(${color.join(',')})`;
+
+            for (let pi = 0; pi <= NUM_POINTS; pi++) {
+              const pd = pointData[pi];
+              const t = pd.t;
+              const w1 = Math.sin(t * PI * 3 + time * tDir) * 55;
+              const w2 = Math.sin(t * PI * 2 + time * 0.6 * tDir) * 28;
+              const waveY = (w1 + w2) * pd.env;
               
-              const centerT = Math.abs(pt1.t - 0.5) * 2;
-              const color = lerpColor(toColor, baseColor, centerT);
+              const wx = startX + t * waveWidth;
+              const wy = cy + waveY * intensity * vDir + 25 * intensity * pd.env * vDir;
               
-              const alpha = line.baseAlpha * (0.4 + intensity * 0.6) * (0.5 + pt1.envelope * 0.5);
-              ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
-              ctx.beginPath();
-              ctx.moveTo(pt1.x, pt1.y);
-              ctx.lineTo(pt2.x, pt2.y);
-              ctx.stroke();
+              const [chkX, chkY] = getCheckPoint(t, cx, cy, r);
+              const fx = lerp(wx, chkX, easedMorph);
+              const fy = lerp(wy, chkY + 5 * vDir, easedMorph);
+
+              if (pi === 0) path.moveTo(fx, fy);
+              else path.lineTo(fx, fy);
             }
+            ctx.stroke(path);
           }
+          ctx.setLineDash([]);
         }
 
-        const segments = 6;
-        const pointsPerSegment = Math.floor(numPoints / segments);
-
-        for (let seg = 0; seg < segments; seg++) {
-          const startIdx = seg * pointsPerSegment;
-          const endIdx = Math.min((seg + 1) * pointsPerSegment, numPoints);
-
-          if (seg % 2 === 0) {
-            drawRibbonSegment(pinkRibbon, pinkColor, purpleColor, startIdx, endIdx);
-            drawRibbonSegment(cyanRibbon, cyanColor, purpleColor, startIdx, endIdx);
-          } else {
-            drawRibbonSegment(cyanRibbon, cyanColor, purpleColor, startIdx, endIdx);
-            drawRibbonSegment(pinkRibbon, pinkColor, purpleColor, startIdx, endIdx);
-          }
-        }
-
-        // ====== ПУНКТИРНЫЕ ЦЕНТРАЛЬНЫЕ ЛИНИИ ======
-        ctx.setLineDash([6, 10]);
-        ctx.lineWidth = 1.0;
-        
-        const dashedOpacity = 0.45 + intensity * 0.35;
-
-        // Cyan пунктир (движется в одну сторону)
-        ctx.beginPath();
-        for (let i = 0; i <= numPoints; i++) {
-          const t = i / numPoints;
-          const x = startX + t * waveWidth;
-          
-          const envelope = standingWaveEnvelope(t);
-          const wave1 = Math.sin(t * PI * 3 + time * 1.0) * 55;
-          const wave2 = Math.sin(t * PI * 2 + time * 0.6) * 28;
-          const baseY = (wave1 + wave2) * envelope;
-          
-          const y = cy + baseY * intensity * (-1) - 25 * intensity * envelope;
-
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        
-        const cyanGradient = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
-        cyanGradient.addColorStop(0, `rgba(77, 208, 255, ${dashedOpacity})`);
-        cyanGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.85})`);
-        cyanGradient.addColorStop(1, `rgba(77, 208, 255, ${dashedOpacity})`);
-        ctx.strokeStyle = cyanGradient;
-        ctx.stroke();
-
-        // Pink пунктир (движется в другую сторону)
-        ctx.beginPath();
-        for (let i = 0; i <= numPoints; i++) {
-          const t = i / numPoints;
-          const x = startX + t * waveWidth;
-          
-          const envelope = standingWaveEnvelope(t);
-          const wave1 = Math.sin(t * PI * 3 - time * 1.0) * 55;
-          const wave2 = Math.sin(t * PI * 2 - time * 0.6) * 28;
-          const baseY = (wave1 + wave2) * envelope;
-          
-          const y = cy + baseY * intensity * (1) + 25 * intensity * envelope;
-
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        
-        const pinkGradient = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
-        pinkGradient.addColorStop(0, `rgba(255, 101, 230, ${dashedOpacity})`);
-        pinkGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.85})`);
-        pinkGradient.addColorStop(1, `rgba(255, 101, 230, ${dashedOpacity})`);
-        ctx.strokeStyle = pinkGradient;
-        ctx.stroke();
-        
-        ctx.setLineDash([]);
+        ctx.globalAlpha = 1;
         ctx.restore();
       }
 
-      function animate() {
+      // Оптимизированное обновление лейблов - только когда реально изменился текст
+      function updateLabels(force = false) {
+        let newTitle = '';
+        let newSubtitle = '';
+
+        if (state.mode === 'analysis') {
+          const elapsed = performance.now() - state.analysisStartTime;
+          const remaining = Math.max(0, Math.ceil((ANALYSIS_DURATION - elapsed) / 1000));
+          
+          if (state.analysisPhase === 'analyzing') {
+            newTitle = 'ANALYZING';
+            newSubtitle = remaining > 0 ? `${remaining}s remaining...` : 'Finishing...';
+          } else {
+            newTitle = 'COMPLETE';
+            newSubtitle = 'Analysis finished';
+          }
+        } else if (state.mode === 'mic') {
+          newTitle = 'LISTENING';
+          newSubtitle = 'Speak naturally';
+        } else if (state.mode === 'idle') {
+          newTitle = 'READY';
+          newSubtitle = 'Select a mode';
+        } else if (state.mode === 'active') {
+          newTitle = 'ACTIVE';
+          newSubtitle = 'Processing...';
+        }
+
+        // Обновляем DOM только если текст действительно изменился
+        if (force || newTitle !== state.currentTitle) {
+          titleEl.textContent = newTitle;
+          state.currentTitle = newTitle;
+        }
+        if (force || newSubtitle !== state.currentSubtitle) {
+          subtitleEl.textContent = newSubtitle;
+          state.currentSubtitle = newSubtitle;
+        }
+      }
+
+      let lastFrame = 0;
+      
+      function animate(now) {
+        // Динамический FPS для плавности
+        const targetFPS = state.mode === 'analysis' ? 45 : 60;
+        const frameTime = 1000 / targetFPS;
+        
+        if (now - lastFrame < frameTime * 0.95) {
+          requestAnimationFrame(animate);
+          return;
+        }
+        lastFrame = now;
         
         if (state.mode === 'mic' && analyser && timeData) {
           analyser.getByteTimeDomainData(timeData);
-          let sumOfSquares = 0;
-          const dataLength = timeData.length;
-
-          for (let i = 0; i < dataLength; i++) {
-            const normalized = (timeData[i] - 128) / 128;
-            sumOfSquares += normalized * normalized;
+          let sum = 0;
+          for (let i = 0; i < timeData.length; i++) {
+            const n = (timeData[i] - 128) / 128;
+            sum += n * n;
           }
-
-          const rms = Math.sqrt(sumOfSquares / dataLength);
+          const rms = Math.sqrt(sum / timeData.length);
           state.smoothedRms = lerp(state.smoothedRms, rms, 0.35);
           
-          const silenceThreshold = 0.01;
-          
-          if (state.smoothedRms > silenceThreshold) {
-            // Звук есть - амплитуда и скорость увеличиваются
-            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 10, 0, 1);
-            state.targetAmp = 0.3 + soundLevel * 0.7;
-            state.targetTimeSpeed = 0.8 + soundLevel * 1.2; // Быстрее при громком звуке
+          if (state.smoothedRms > 0.01) {
+            const lvl = clamp((state.smoothedRms - 0.01) * 10, 0, 1);
+            state.targetAmp = 0.3 + lvl * 0.7;
+            state.targetTimeSpeed = 0.8 + lvl * 1.2;
           } else {
-            // Тишина - амплитуда падает, движение замедляется
             state.targetAmp = 0.03;
-            state.targetTimeSpeed = 0.1; // Почти остановка
+            state.targetTimeSpeed = 0.1;
           }
           
-          // Плавное изменение амплитуды
-          const ampSpeed = state.targetAmp > state.amp ? 0.25 : 0.08;
-          state.amp = lerp(state.amp, state.targetAmp, ampSpeed);
-          
-          // Плавное изменение скорости
+          state.amp = lerp(state.amp, state.targetAmp, state.targetAmp > state.amp ? 0.25 : 0.08);
           state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.15);
+          state.morphProgress = lerp(state.morphProgress, 0, 0.1);
           
         } else if (state.mode === 'idle') {
           state.targetAmp = 0.03;
           state.targetTimeSpeed = 0.15;
           state.amp = lerp(state.amp, state.targetAmp, 0.05);
           state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.05);
+          state.morphProgress = lerp(state.morphProgress, 0, 0.1);
           
         } else if (state.mode === 'analysis') {
-          const breathe = (Math.sin(performance.now() / 1500) + 1) / 2;
-          state.targetAmp = 0.15 + breathe * 0.25;
-          state.targetTimeSpeed = 0.4 + breathe * 0.3;
-          state.amp = lerp(state.amp, state.targetAmp, 0.1);
-          state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.1);
+          const elapsed = now - state.analysisStartTime;
+          
+          if (elapsed < ANALYSIS_DURATION) {
+            state.analysisPhase = 'analyzing';
+            const breathe = (Math.sin(now / 600) + 1) / 2;
+            state.targetAmp = 0.3 + breathe * 0.3;
+            state.targetTimeSpeed = 0.6 + breathe * 0.5;
+            state.morphProgress = lerp(state.morphProgress, 0, 0.1);
+          } else if (elapsed < ANALYSIS_DURATION + MORPH_DURATION) {
+            state.analysisPhase = 'morphing';
+            state.morphProgress = clamp((elapsed - ANALYSIS_DURATION) / MORPH_DURATION, 0, 1);
+            state.targetAmp = lerp(0.5, 0.6, state.morphProgress);
+            state.targetTimeSpeed = lerp(0.6, 0.02, state.morphProgress);
+          } else {
+            state.analysisPhase = 'complete';
+            state.morphProgress = 1;
+            state.targetAmp = 0.6;
+            state.targetTimeSpeed = 0.02;
+          }
+          
+          state.amp = lerp(state.amp, state.targetAmp, 0.12);
+          state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.12);
+          
+          // Обновляем лейблы только периодически, не каждый кадр!
+          if (now - state.lastLabelUpdate > LABEL_UPDATE_INTERVAL) {
+            updateLabels();
+            state.lastLabelUpdate = now;
+          }
           
         } else if (state.mode === 'active') {
-          const breathe = (Math.sin(performance.now() / 800) + 1) / 2;
+          const breathe = (Math.sin(now / 800) + 1) / 2;
           state.targetAmp = 0.85 + breathe * 0.15;
           state.targetTimeSpeed = 1.2 + breathe * 0.4;
           state.amp = lerp(state.amp, state.targetAmp, 0.15);
           state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.15);
+          state.morphProgress = lerp(state.morphProgress, 0, 0.1);
         }
 
-        // Обновляем время для движения волн
         state.time += state.timeSpeed / 60;
 
-        const canvasWidth = canvas.clientWidth || 540;
-        const canvasHeight = canvas.clientHeight || 540;
-        const centerX = canvasWidth / 2;
-        const centerY = canvasHeight / 2;
-        const radius = Math.min(canvasWidth, canvasHeight) * 0.46;
+        const w = canvas.clientWidth || 540;
+        const h = canvas.clientHeight || 540;
+        const cx = w / 2;
+        const cy = h / 2;
+        const r = Math.min(w, h) * 0.46;
 
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-
-        fillSphereBase(centerX, centerY, radius);
-        drawFlowingStandingWaves(centerX, centerY, radius, state.time, state.amp);
-        addGleams(centerX, centerY, radius);
+        ctx.clearRect(0, 0, w, h);
+        fillSphereBase(cx, cy, r);
+        drawWaves(cx, cy, r, state.time, state.amp, state.morphProgress);
+        addGleams(cx, cy, r);
 
         requestAnimationFrame(animate);
       }
@@ -536,89 +643,90 @@
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           micStream = stream;
-          const AudioContext = window.AudioContext || window.webkitAudioContext;
-          audioCtx = new AudioContext();
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           const source = audioCtx.createMediaStreamSource(stream);
           analyser = audioCtx.createAnalyser();
-          analyser.fftSize = 1024;
+          analyser.fftSize = 512;
           analyser.smoothingTimeConstant = 0.8;
           source.connect(analyser);
           timeData = new Uint8Array(analyser.frequencyBinCount);
           
-          msg.textContent = 'Mic on — speak!';
+          msg.textContent = 'Mic on';
           state.mode = 'mic';
+          updateLabels(true);
           setPressed(idleBtn, false);
           setPressed(analysisBtn, false);
           setPressed(activeBtn, false);
           setPressed(micBtn, true);
-        } catch (error) {
-          msg.textContent = 'No mic access';
+        } catch (e) {
+          msg.textContent = 'No mic';
           state.mode = 'active';
-          setPressed(idleBtn, false);
-          setPressed(analysisBtn, false);
+          updateLabels(true);
           setPressed(activeBtn, true);
-          setPressed(micBtn, false);
         }
       }
 
       function stopMic() {
-        if (micStream) {
-          micStream.getTracks().forEach(track => track.stop());
-          micStream = null;
-        }
-        if (audioCtx) {
-          audioCtx.close();
-          audioCtx = null;
-        }
-        analyser = null;
-        timeData = null;
+        if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+        if (audioCtx) { audioCtx.close(); audioCtx = null; }
+        analyser = null; timeData = null;
       }
 
-      idleBtn.addEventListener('click', () => {
+      idleBtn.onclick = () => {
         stopMic();
         state.mode = 'idle';
+        state.analysisPhase = 'analyzing';
+        updateLabels(true);
         setPressed(idleBtn, true);
         setPressed(analysisBtn, false);
         setPressed(activeBtn, false);
         setPressed(micBtn, false);
         msg.textContent = '';
-      });
+      };
 
-      analysisBtn.addEventListener('click', () => {
+      analysisBtn.onclick = () => {
         stopMic();
         state.mode = 'analysis';
+        state.analysisStartTime = performance.now();
+        state.analysisPhase = 'analyzing';
+        state.morphProgress = 0;
+        state.lastLabelUpdate = 0;
+        checkPointCache.clear(); // Очищаем кэш при новом запуске
+        updateLabels(true);
         setPressed(idleBtn, false);
         setPressed(analysisBtn, true);
         setPressed(activeBtn, false);
         setPressed(micBtn, false);
         msg.textContent = '';
-      });
+      };
 
-      activeBtn.addEventListener('click', () => {
+      activeBtn.onclick = () => {
         stopMic();
         state.mode = 'active';
+        state.analysisPhase = 'analyzing';
+        updateLabels(true);
         setPressed(idleBtn, false);
         setPressed(analysisBtn, false);
         setPressed(activeBtn, true);
         setPressed(micBtn, false);
         msg.textContent = '';
-      });
+      };
 
-      micBtn.addEventListener('click', () => {
+      micBtn.onclick = () => {
         if (state.mode === 'mic') {
           stopMic();
           state.mode = 'idle';
+          updateLabels(true);
           setPressed(idleBtn, true);
-          setPressed(analysisBtn, false);
-          setPressed(activeBtn, false);
           setPressed(micBtn, false);
           msg.textContent = '';
         } else {
           startMic();
         }
-      });
+      };
 
       window.addEventListener('pagehide', stopMic);
+      updateLabels(true);
     })();
   </script>
 </body>
