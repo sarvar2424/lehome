@@ -461,34 +461,35 @@
           // Быстрое сглаживание для отзывчивости
           state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.25;
           
-          // Низкий порог тишины для высокой чувствительности
           const silenceThreshold = 0.008;
           
           if (state.smoothedRms > silenceThreshold) {
-            // Есть звук - яркая активная анимация
-            // Высокая чувствительность: умножаем на 12 для сильной реакции
+            // Есть звук - волны разворачиваются
             const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 12, 0, 1);
             state.targetAmp = lerp(0.3, 1.0, soundLevel);
-            state.time += 1.5 / 60; // Быстрая анимация
+            state.time += 1.5 / 60;
+            // Быстрое появление волн
+            state.amp += (state.targetAmp - state.amp) * 0.25;
           } else {
-            // Тишина - idle анимация (плоские волны)
-            const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
-            state.targetAmp = 0.02 + breathe * 0.04;
-            state.time += 0.25 / 60;
+            // Тишина - волны собираются к центру (почти в линию)
+            state.targetAmp = 0.01; // Почти плоская линия
+            // Плавное затухание
+            state.amp += (state.targetAmp - state.amp) * 0.08;
+            // Медленное движение при затихании
+            state.time += 0.15 / 60;
           }
           
         } else if (state.mode === 'idle') {
           const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
           state.targetAmp = 0.02 + breathe * 0.04;
           state.time += 0.25 / 60;
+          state.amp += (state.targetAmp - state.amp) * 0.08;
         } else {
           const breathe = Math.sin(state.time * 0.8);
           state.targetAmp = 0.9 + breathe * 0.12;
           state.time += 1.3 / 60;
+          state.amp += (state.targetAmp - state.amp) * 0.2;
         }
-
-        // Быстрое сглаживание амплитуды для отзывчивости
-        state.amp += (state.targetAmp - state.amp) * 0.2;
 
         const canvasWidth = canvas.clientWidth || 540;
         const canvasHeight = canvas.clientHeight || 540;
