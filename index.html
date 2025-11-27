@@ -445,10 +445,9 @@
       }
 
       function animate() {
-        // Скорость анимации зависит от режима
-        const timeSpeed = (state.mode === 'idle') ? 0.25 : 1.3;
-        state.time += timeSpeed / 60;
-
+        // Определяем эффективный режим (для mic без звука = idle)
+        let effectiveMode = state.mode;
+        
         if (state.mode === 'mic' && analyser && timeData) {
           analyser.getByteTimeDomainData(timeData);
           let sumOfSquares = 0;
@@ -460,20 +459,39 @@
           }
 
           const rms = Math.sqrt(sumOfSquares / dataLength);
-          const target = clamp((rms - 0.01) * 4.5, 0, 1);
-          state.targetAmp = lerp(0.12, 0.95, target);
+          
+          // Порог звука - если ниже, считаем тишиной
+          const silenceThreshold = 0.02;
+          
+          if (rms > silenceThreshold) {
+            // Есть звук - активная анимация
+            effectiveMode = 'active';
+            const target = clamp((rms - 0.01) * 4.5, 0, 1);
+            state.targetAmp = lerp(0.15, 0.95, target);
+          } else {
+            // Тишина - idle анимация
+            effectiveMode = 'idle';
+            const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
+            state.targetAmp = 0.02 + breathe * 0.04;
+          }
         } else if (state.mode === 'idle') {
           // Idle: почти горизонтальные волны, минимальное движение
-          const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5; // 0 to 1
-          state.targetAmp = 0.02 + breathe * 0.04; // очень маленькая амплитуда
+          effectiveMode = 'idle';
+          const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
+          state.targetAmp = 0.02 + breathe * 0.04;
         } else {
           // Active: энергичная анимация
+          effectiveMode = 'active';
           const breathe = Math.sin(state.time * 0.8);
           state.targetAmp = 0.9 + breathe * 0.12;
         }
+        
+        // Скорость анимации зависит от эффективного режима
+        const timeSpeed = (effectiveMode === 'idle') ? 0.25 : 1.3;
+        state.time += timeSpeed / 60;
 
         // Более плавное сглаживание в idle режиме
-        const smoothing = (state.mode === 'idle') ? 0.08 : 0.2;
+        const smoothing = (effectiveMode === 'idle') ? 0.08 : 0.2;
         state.amp += (state.targetAmp - state.amp) * smoothing;
 
         const canvasWidth = canvas.clientWidth || 540;
@@ -485,7 +503,7 @@
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
         fillSphereBase(centerX, centerY, radius);
-        drawInterweavingWaves(centerX, centerY, radius, state.time, state.amp, state.mode);
+        drawInterweavingWaves(centerX, centerY, radius, state.time, state.amp, effectiveMode);
         addGleams(centerX, centerY, radius);
 
         requestAnimationFrame(animate);
