@@ -288,8 +288,8 @@
         const numPoints = 180;
         const maxWaveHeight = r * 0.7;
         
-        // В idle режиме - приглушённые цвета
-        const opacityMultiplier = (mode === 'idle') ? 0.4 : 1.0;
+        // Одинаковая яркость во всех режимах
+        const opacityMultiplier = 1.0;
 
         ctx.save();
         ctx.beginPath();
@@ -394,7 +394,7 @@
         ctx.setLineDash([6, 10]);
         ctx.lineWidth = 1.0;
         
-        const dashedOpacity = (mode === 'idle') ? 0.25 : 0.6;
+        const dashedOpacity = 0.6;
 
         // Пунктирная линия для cyan ленты
         ctx.beginPath();
