@@ -181,8 +181,8 @@
 
       const state = {
         mode: 'idle',
-        amp: 0.05,
-        targetAmp: 0.05,
+        amp: 0.135,
+        targetAmp: 0.135,
         smoothedRms: 0,
         time: 0,
         timeSpeed: 0,
@@ -556,8 +556,8 @@
             state.targetAmp = 0.3 + lvl * 0.7;
             state.targetTimeSpeed = 0.8 + lvl * 1.2;
           } else {
-            state.targetAmp = 0.03;
-            state.targetTimeSpeed = 0.1;
+            state.targetAmp = 0.135;
+            state.targetTimeSpeed = 0.45;
           }
           
           state.amp = lerp(state.amp, state.targetAmp, state.targetAmp > state.amp ? 0.25 : 0.08);
@@ -565,8 +565,8 @@
           state.morphProgress = lerp(state.morphProgress, 0, 0.1);
           
         } else if (state.mode === 'idle') {
-          state.targetAmp = 0.03;
-          state.targetTimeSpeed = 0.15;
+          state.targetAmp = 0.135;
+          state.targetTimeSpeed = 0.675;
           state.amp = lerp(state.amp, state.targetAmp, 0.05);
           state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.05);
           state.morphProgress = lerp(state.morphProgress, 0, 0.1);
