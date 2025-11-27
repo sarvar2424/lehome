@@ -458,17 +458,18 @@
 
           const rms = Math.sqrt(sumOfSquares / dataLength);
           
-          // Плавное сглаживание уровня звука
-          state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.08;
+          // Быстрое сглаживание для отзывчивости
+          state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.25;
           
-          // Порог тишины
-          const silenceThreshold = 0.015;
+          // Низкий порог тишины для высокой чувствительности
+          const silenceThreshold = 0.008;
           
           if (state.smoothedRms > silenceThreshold) {
-            // Есть звук - активная анимация
-            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 5, 0, 1);
-            state.targetAmp = lerp(0.15, 0.95, soundLevel);
-            state.time += 1.0 / 60;
+            // Есть звук - яркая активная анимация
+            // Высокая чувствительность: умножаем на 12 для сильной реакции
+            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 12, 0, 1);
+            state.targetAmp = lerp(0.3, 1.0, soundLevel);
+            state.time += 1.5 / 60; // Быстрая анимация
           } else {
             // Тишина - idle анимация (плоские волны)
             const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
@@ -486,8 +487,8 @@
           state.time += 1.3 / 60;
         }
 
-        // Плавное сглаживание амплитуды
-        state.amp += (state.targetAmp - state.amp) * 0.08;
+        // Быстрое сглаживание амплитуды для отзывчивости
+        state.amp += (state.targetAmp - state.amp) * 0.2;
 
         const canvasWidth = canvas.clientWidth || 540;
         const canvasHeight = canvas.clientHeight || 540;
