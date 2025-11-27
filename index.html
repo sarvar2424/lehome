@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>LEORA Voice Wave — Pulse Effect</title>
+  <title>LEORA Voice Wave — Standing Wave + Flow + Pulse</title>
   <style>
     :root { color-scheme: dark; }
 
@@ -179,18 +179,12 @@
 
       const state = {
         mode: 'idle',
-        amp: 0.18,
-        targetAmp: 0.18,
-        time: 0,
+        amp: 0.05,
+        targetAmp: 0.05,
         smoothedRms: 0,
-        
-        // === НОВЫЕ ПАРАМЕТРЫ ДЛЯ ПУЛЬСА ===
-        pulsePhase: 0,        // Фаза текущего пульса (0-1)
-        pulseActive: false,   // Активен ли пульс сейчас
-        pulseDecay: 0,        // Затухание после пульса
-        lastSoundTime: 0,     // Когда последний раз был звук
-        pulseIntensity: 0,    // Интенсивность текущего пульса
-        timeSpeed: 0,         // Скорость движения волн
+        time: 0,           // Время для движения волн
+        timeSpeed: 0,      // Скорость движения
+        targetTimeSpeed: 0,
       };
 
       let audioCtx = null;
@@ -216,7 +210,6 @@
       const lerp = (a, b, t) => a + (b - a) * t;
       const clamp = (x, min, max) => Math.min(max, Math.max(min, x));
 
-      // Цвета для двух лент
       const cyanColor = { r: 77, g: 208, b: 255 };
       const purpleColor = { r: 164, g: 91, b: 255 };
       const pinkColor = { r: 255, g: 101, b: 230 };
@@ -290,34 +283,36 @@
       }
 
       // ---------------------------------------------------------------------
-      // ДВЕ ЛЕНТЫ: Cyan и Pink с эффектом пульса
+      // СТОЯЧАЯ ВОЛНА + ДВИЖЕНИЕ + ПУЛЬС
       // ---------------------------------------------------------------------
-      function drawInterweavingWaves(cx, cy, r, time, intensity, mode) {
+      function drawFlowingStandingWaves(cx, cy, r, time, intensity) {
         const waveWidth = r * 2.1;
         const startX = cx - r * 1.05;
-        const numPoints = 180;
-        const maxWaveHeight = r * 0.7;
-        
-        const opacityMultiplier = 1.0;
+        const numPoints = 200;
 
         ctx.save();
         ctx.beginPath();
         ctx.arc(cx, cy, r - 1, 0, TAU);
         ctx.clip();
 
-        const numLinesPerRibbon = 35;
+        const numLinesPerRibbon = 70;
 
-        // Генерация точек для одной ленты
-        function generateRibbon(timeDirection, baseVerticalOffset) {
+        // Огибающая стоячей волны - широко по краям, узко в узлах
+        function standingWaveEnvelope(t) {
+          const nodes = Math.abs(Math.cos(t * PI * 3));
+          return 0.15 + nodes * 0.85;
+        }
+
+        function generateRibbon(verticalDirection, baseVerticalOffset, timeDirection) {
           const lines = [];
           
           for (let lineIdx = 0; lineIdx < numLinesPerRibbon; lineIdx++) {
             const lineT = lineIdx / (numLinesPerRibbon - 1);
             
-            const phaseOffset = lineT * PI * 2.5 + Math.sin(lineT * PI * 3) * 0.8;
-            const amplitudeVariation = 0.6 + Math.sin(lineT * PI * 2 + 0.5) * 0.4;
+            const phaseOffset = lineT * PI * 2.2 + Math.sin(lineT * PI * 2.5) * 0.6;
+            const amplitudeVariation = 0.5 + Math.sin(lineT * PI * 2 + 0.3) * 0.5;
+            const verticalSpread = (lineT - 0.5) * 50;
             const speedVariation = 0.8 + lineT * 0.4;
-            const verticalShift = (lineT - 0.5) * maxWaveHeight * 0.25 + baseVerticalOffset;
             
             const points = [];
             
@@ -325,41 +320,39 @@
               const t = i / numPoints;
               const x = startX + t * waveWidth;
 
-              const ampScale = intensity;
-
-              const wave1 = Math.sin(t * PI * 2.8 + time * speedVariation * timeDirection + phaseOffset) 
-                           * 60 * amplitudeVariation * ampScale;
+              // Огибающая стоячей волны
+              const envelope = standingWaveEnvelope(t);
               
-              const wave2 = Math.sin(t * PI * 1.8 - time * 0.7 * timeDirection + phaseOffset * 0.6) 
-                           * 35 * amplitudeVariation * ampScale;
-              
-              const wave3 = Math.sin(t * PI * 4.5 + time * 1.3 * timeDirection + lineT * PI * 2) 
-                           * 14 * ampScale;
+              // Форма волны С ДВИЖЕНИЕМ - time добавляет бегущую составляющую
+              const wave1 = Math.sin(t * PI * 3 + time * speedVariation * timeDirection + phaseOffset) * 70 * amplitudeVariation;
+              const wave2 = Math.sin(t * PI * 2 + time * 0.7 * timeDirection + phaseOffset * 0.6) * 35 * amplitudeVariation;
+              const wave3 = Math.sin(t * PI * 5 + time * 1.2 * timeDirection + lineT * PI * 1.5) * 18;
 
-              const envelope = Math.pow(Math.sin(t * PI), 0.9);
-              const waveY = (wave1 + wave2 + wave3) * envelope;
+              const baseWaveY = (wave1 + wave2 + wave3) * envelope;
+              const waveY = baseWaveY * intensity * verticalDirection;
+              const verticalOffset = (baseVerticalOffset + verticalSpread) * intensity * envelope;
               
-              const scaledVerticalShift = verticalShift * ampScale;
-              const y = cy + waveY + scaledVerticalShift;
+              const y = cy + waveY + verticalOffset;
 
-              points.push({ x, y, t });
+              points.push({ x, y, t, envelope });
             }
             
             lines.push({
               points,
               lineT,
-              baseAlpha: 0.15 + Math.sin(lineT * PI) * 0.35
+              baseAlpha: 0.1 + Math.sin(lineT * PI) * 0.4
             });
           }
           return lines;
         }
 
-        const cyanRibbon = generateRibbon(1, -15);
-        const pinkRibbon = generateRibbon(-1, 15);
+        // Cyan движется в одну сторону, Pink в другую - создаёт эффект переплетения
+        const cyanRibbon = generateRibbon(-1, -25, 1);
+        const pinkRibbon = generateRibbon(1, 25, -1);
 
         function drawRibbonSegment(ribbon, baseColor, toColor, start, end) {
           for (const line of ribbon) {
-            ctx.lineWidth = 0.6;
+            ctx.lineWidth = 0.55;
             
             for (let i = start; i < end && i < line.points.length - 1; i++) {
               const pt1 = line.points[i];
@@ -368,7 +361,7 @@
               const centerT = Math.abs(pt1.t - 0.5) * 2;
               const color = lerpColor(toColor, baseColor, centerT);
               
-              const alpha = line.baseAlpha * opacityMultiplier;
+              const alpha = line.baseAlpha * (0.4 + intensity * 0.6) * (0.5 + pt1.envelope * 0.5);
               ctx.strokeStyle = `rgba(${color.r}, ${color.g}, ${color.b}, ${alpha})`;
               ctx.beginPath();
               ctx.moveTo(pt1.x, pt1.y);
@@ -398,17 +391,20 @@
         ctx.setLineDash([6, 10]);
         ctx.lineWidth = 1.0;
         
-        const dashedOpacity = 0.6;
+        const dashedOpacity = 0.45 + intensity * 0.35;
 
+        // Cyan пунктир (движется в одну сторону)
         ctx.beginPath();
         for (let i = 0; i <= numPoints; i++) {
           const t = i / numPoints;
           const x = startX + t * waveWidth;
-          const wave1 = Math.sin(t * PI * 2.8 + time * 1.2) * 43 * intensity;
-          const wave2 = Math.sin(t * PI * 1.8 - time * 0.5) * 27 * intensity;
-          const envelope = Math.pow(Math.sin(t * PI), 0.9);
-          const waveY = (wave1 + wave2) * envelope * 0.5;
-          const y = cy + waveY - 15 * intensity;
+          
+          const envelope = standingWaveEnvelope(t);
+          const wave1 = Math.sin(t * PI * 3 + time * 1.0) * 55;
+          const wave2 = Math.sin(t * PI * 2 + time * 0.6) * 28;
+          const baseY = (wave1 + wave2) * envelope;
+          
+          const y = cy + baseY * intensity * (-1) - 25 * intensity * envelope;
 
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
@@ -416,20 +412,23 @@
         
         const cyanGradient = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
         cyanGradient.addColorStop(0, `rgba(77, 208, 255, ${dashedOpacity})`);
-        cyanGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.9})`);
+        cyanGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.85})`);
         cyanGradient.addColorStop(1, `rgba(77, 208, 255, ${dashedOpacity})`);
         ctx.strokeStyle = cyanGradient;
         ctx.stroke();
 
+        // Pink пунктир (движется в другую сторону)
         ctx.beginPath();
         for (let i = 0; i <= numPoints; i++) {
           const t = i / numPoints;
           const x = startX + t * waveWidth;
-          const wave1 = Math.sin(t * PI * 2.8 - time * 1.2) * 43 * intensity;
-          const wave2 = Math.sin(t * PI * 1.8 + time * 0.5) * 27 * intensity;
-          const envelope = Math.pow(Math.sin(t * PI), 0.9);
-          const waveY = (wave1 + wave2) * envelope * 0.5;
-          const y = cy + waveY + 15 * intensity;
+          
+          const envelope = standingWaveEnvelope(t);
+          const wave1 = Math.sin(t * PI * 3 - time * 1.0) * 55;
+          const wave2 = Math.sin(t * PI * 2 - time * 0.6) * 28;
+          const baseY = (wave1 + wave2) * envelope;
+          
+          const y = cy + baseY * intensity * (1) + 25 * intensity * envelope;
 
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
@@ -437,7 +436,7 @@
         
         const pinkGradient = ctx.createLinearGradient(startX, cy, startX + waveWidth, cy);
         pinkGradient.addColorStop(0, `rgba(255, 101, 230, ${dashedOpacity})`);
-        pinkGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.9})`);
+        pinkGradient.addColorStop(0.5, `rgba(164, 91, 255, ${dashedOpacity * 0.85})`);
         pinkGradient.addColorStop(1, `rgba(255, 101, 230, ${dashedOpacity})`);
         ctx.strokeStyle = pinkGradient;
         ctx.stroke();
@@ -446,9 +445,7 @@
         ctx.restore();
       }
 
-      // === ГЛАВНЫЙ ЦИКЛ АНИМАЦИИ С ПУЛЬСОМ ===
       function animate() {
-        const now = performance.now();
         
         if (state.mode === 'mic' && analyser && timeData) {
           analyser.getByteTimeDomainData(timeData);
@@ -461,79 +458,51 @@
           }
 
           const rms = Math.sqrt(sumOfSquares / dataLength);
+          state.smoothedRms = lerp(state.smoothedRms, rms, 0.35);
           
-          // Сглаживание RMS
-          state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.3;
+          const silenceThreshold = 0.01;
           
-          const silenceThreshold = 0.012;
-          const soundDetected = state.smoothedRms > silenceThreshold;
-          
-          if (soundDetected) {
-            // === ЗВУК ОБНАРУЖЕН - ПУЛЬС АКТИВИРУЕТСЯ ===
-            state.lastSoundTime = now;
-            state.pulseActive = true;
-            
-            // Интенсивность пульса зависит от громкости
-            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 8, 0, 1);
-            
-            // Быстрое нарастание пульса
-            state.pulseIntensity = lerp(state.pulseIntensity, 0.5 + soundLevel * 0.5, 0.3);
-            
-            // Скорость движения волн увеличивается
-            state.timeSpeed = lerp(state.timeSpeed, 1.5 + soundLevel * 1.0, 0.25);
-            
-            // Целевая амплитуда
-            state.targetAmp = 0.6 + soundLevel * 0.4;
-            
+          if (state.smoothedRms > silenceThreshold) {
+            // Звук есть - амплитуда и скорость увеличиваются
+            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 10, 0, 1);
+            state.targetAmp = 0.3 + soundLevel * 0.7;
+            state.targetTimeSpeed = 0.8 + soundLevel * 1.2; // Быстрее при громком звуке
           } else {
-            // === ТИШИНА - ПУЛЬС ЗАТУХАЕТ ===
-            const timeSinceSound = now - state.lastSoundTime;
-            
-            // Фаза затухания (0-1 за 800мс)
-            const decayProgress = clamp(timeSinceSound / 800, 0, 1);
-            
-            // Плавное затухание пульса
-            state.pulseIntensity = lerp(state.pulseIntensity, 0, 0.08);
-            
-            // Скорость движения замедляется
-            state.timeSpeed = lerp(state.timeSpeed, 0.1, 0.05);
-            
-            // Амплитуда уменьшается до минимума
-            state.targetAmp = lerp(state.targetAmp, 0.05, 0.04);
-            
-            // После полного затухания - почти полная остановка
-            if (decayProgress > 0.9) {
-              state.pulseActive = false;
-              state.timeSpeed = lerp(state.timeSpeed, 0.02, 0.1);
-            }
+            // Тишина - амплитуда падает, движение замедляется
+            state.targetAmp = 0.03;
+            state.targetTimeSpeed = 0.1; // Почти остановка
           }
           
-          // Обновляем время с учётом скорости
-          state.time += state.timeSpeed / 60;
-          
           // Плавное изменение амплитуды
-          state.amp = lerp(state.amp, state.targetAmp, 0.15);
+          const ampSpeed = state.targetAmp > state.amp ? 0.25 : 0.08;
+          state.amp = lerp(state.amp, state.targetAmp, ampSpeed);
+          
+          // Плавное изменение скорости
+          state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.15);
           
         } else if (state.mode === 'idle') {
-          // Idle - минимальное движение
           state.targetAmp = 0.03;
-          state.time += 0.1 / 60;
-          state.amp += (state.targetAmp - state.amp) * 0.05;
+          state.targetTimeSpeed = 0.15;
+          state.amp = lerp(state.amp, state.targetAmp, 0.05);
+          state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.05);
           
         } else if (state.mode === 'analysis') {
-          // Analysis - плавное "дыхание"
-          const breathe = Math.sin(state.time * 0.8) * 0.5 + 0.5;
-          state.targetAmp = 0.12 + breathe * 0.06;
-          state.time += 0.6 / 60;
-          state.amp += (state.targetAmp - state.amp) * 0.1;
+          const breathe = (Math.sin(performance.now() / 1500) + 1) / 2;
+          state.targetAmp = 0.15 + breathe * 0.25;
+          state.targetTimeSpeed = 0.4 + breathe * 0.3;
+          state.amp = lerp(state.amp, state.targetAmp, 0.1);
+          state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.1);
           
-        } else {
-          // Active - постоянное активное движение
-          const breathe = Math.sin(state.time * 0.8);
-          state.targetAmp = 0.9 + breathe * 0.12;
-          state.time += 1.3 / 60;
-          state.amp += (state.targetAmp - state.amp) * 0.2;
+        } else if (state.mode === 'active') {
+          const breathe = (Math.sin(performance.now() / 800) + 1) / 2;
+          state.targetAmp = 0.85 + breathe * 0.15;
+          state.targetTimeSpeed = 1.2 + breathe * 0.4;
+          state.amp = lerp(state.amp, state.targetAmp, 0.15);
+          state.timeSpeed = lerp(state.timeSpeed, state.targetTimeSpeed, 0.15);
         }
+
+        // Обновляем время для движения волн
+        state.time += state.timeSpeed / 60;
 
         const canvasWidth = canvas.clientWidth || 540;
         const canvasHeight = canvas.clientHeight || 540;
@@ -544,7 +513,7 @@
         ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
         fillSphereBase(centerX, centerY, radius);
-        drawInterweavingWaves(centerX, centerY, radius, state.time, state.amp, state.mode);
+        drawFlowingStandingWaves(centerX, centerY, radius, state.time, state.amp);
         addGleams(centerX, centerY, radius);
 
         requestAnimationFrame(animate);
@@ -572,15 +541,9 @@
           const source = audioCtx.createMediaStreamSource(stream);
           analyser = audioCtx.createAnalyser();
           analyser.fftSize = 1024;
-          analyser.smoothingTimeConstant = 0.85;
+          analyser.smoothingTimeConstant = 0.8;
           source.connect(analyser);
           timeData = new Uint8Array(analyser.frequencyBinCount);
-          
-          // Сброс состояния пульса при старте
-          state.pulseIntensity = 0;
-          state.timeSpeed = 0.1;
-          state.lastSoundTime = 0;
-          state.pulseActive = false;
           
           msg.textContent = 'Mic on — speak!';
           state.mode = 'mic';
