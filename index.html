@@ -461,12 +461,20 @@
           // Плавное сглаживание уровня звука
           state.smoothedRms = state.smoothedRms + (rms - state.smoothedRms) * 0.08;
           
-          // Амплитуда от idle до active
-          const soundLevel = clamp(state.smoothedRms * 5, 0, 1);
-          state.targetAmp = lerp(0.05, 0.95, soundLevel);
+          // Порог тишины
+          const silenceThreshold = 0.015;
           
-          // Постоянная скорость
-          state.time += 1.0 / 60;
+          if (state.smoothedRms > silenceThreshold) {
+            // Есть звук - активная анимация
+            const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 5, 0, 1);
+            state.targetAmp = lerp(0.15, 0.95, soundLevel);
+            state.time += 1.0 / 60;
+          } else {
+            // Тишина - idle анимация (плоские волны)
+            const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
+            state.targetAmp = 0.02 + breathe * 0.04;
+            state.time += 0.25 / 60;
+          }
           
         } else if (state.mode === 'idle') {
           const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
