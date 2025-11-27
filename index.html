@@ -160,6 +160,7 @@
 
     <div class="panel" role="toolbar" aria-label="controls">
       <button id="idle" class="btn" aria-pressed="true">Idle</button>
+      <button id="analysis" class="btn" aria-pressed="false">Analysis</button>
       <button id="active" class="btn" aria-pressed="false">Active</button>
       <button id="mic" class="btn" aria-pressed="false">Mic</button>
       <span class="info" id="msg"></span>
@@ -317,21 +318,27 @@
               const t = i / numPoints;
               const x = startX + t * waveWidth;
 
+              // Масштабируем всю амплитуду на intensity
+              const ampScale = intensity;
+
               // Главная волна - направление зависит от timeDirection
               const wave1 = Math.sin(t * PI * 2.8 + time * speedVariation * timeDirection + phaseOffset) 
-                           * (35 + intensity * 25) * amplitudeVariation;
+                           * 60 * amplitudeVariation * ampScale;
               
               // Вторая гармоника
               const wave2 = Math.sin(t * PI * 1.8 - time * 0.7 * timeDirection + phaseOffset * 0.6) 
-                           * (20 + intensity * 15) * amplitudeVariation;
+                           * 35 * amplitudeVariation * ampScale;
               
               // Третья гармоника
               const wave3 = Math.sin(t * PI * 4.5 + time * 1.3 * timeDirection + lineT * PI * 2) 
-                           * (8 + intensity * 6);
+                           * 14 * ampScale;
 
               const envelope = Math.pow(Math.sin(t * PI), 0.9);
               const waveY = (wave1 + wave2 + wave3) * envelope;
-              const y = cy + waveY + verticalShift;
+              
+              // Вертикальное смещение тоже масштабируем
+              const scaledVerticalShift = verticalShift * ampScale;
+              const y = cy + waveY + scaledVerticalShift;
 
               points.push({ x, y, t });
             }
@@ -402,11 +409,11 @@
         for (let i = 0; i <= numPoints; i++) {
           const t = i / numPoints;
           const x = startX + t * waveWidth;
-          const wave1 = Math.sin(t * PI * 2.8 + time * 1.2) * (25 + intensity * 18);
-          const wave2 = Math.sin(t * PI * 1.8 - time * 0.5) * (15 + intensity * 12);
+          const wave1 = Math.sin(t * PI * 2.8 + time * 1.2) * 43 * intensity;
+          const wave2 = Math.sin(t * PI * 1.8 - time * 0.5) * 27 * intensity;
           const envelope = Math.pow(Math.sin(t * PI), 0.9);
           const waveY = (wave1 + wave2) * envelope * 0.5;
-          const y = cy + waveY - 15;
+          const y = cy + waveY - 15 * intensity;
 
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
@@ -424,11 +431,11 @@
         for (let i = 0; i <= numPoints; i++) {
           const t = i / numPoints;
           const x = startX + t * waveWidth;
-          const wave1 = Math.sin(t * PI * 2.8 - time * 1.2) * (25 + intensity * 18);
-          const wave2 = Math.sin(t * PI * 1.8 + time * 0.5) * (15 + intensity * 12);
+          const wave1 = Math.sin(t * PI * 2.8 - time * 1.2) * 43 * intensity;
+          const wave2 = Math.sin(t * PI * 1.8 + time * 0.5) * 27 * intensity;
           const envelope = Math.pow(Math.sin(t * PI), 0.9);
           const waveY = (wave1 + wave2) * envelope * 0.5;
-          const y = cy + waveY + 15;
+          const y = cy + waveY + 15 * intensity;
 
           if (i === 0) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
@@ -466,24 +473,30 @@
           if (state.smoothedRms > silenceThreshold) {
             // Есть звук - волны разворачиваются
             const soundLevel = clamp((state.smoothedRms - silenceThreshold) * 12, 0, 1);
-            state.targetAmp = lerp(0.3, 1.0, soundLevel);
+            state.targetAmp = lerp(0.4, 1.0, soundLevel);
             state.time += 1.5 / 60;
             // Быстрое появление волн
             state.amp += (state.targetAmp - state.amp) * 0.25;
           } else {
-            // Тишина - волны собираются к центру (почти в линию)
-            state.targetAmp = 0.01; // Почти плоская линия
+            // Тишина - волны максимально сжаты (почти прямая линия)
+            state.targetAmp = 0.02; // Минимальная видимость
             // Плавное затухание
-            state.amp += (state.targetAmp - state.amp) * 0.08;
-            // Медленное движение при затихании
-            state.time += 0.15 / 60;
+            state.amp += (state.targetAmp - state.amp) * 0.06;
+            // Очень медленное движение
+            state.time += 0.1 / 60;
           }
           
         } else if (state.mode === 'idle') {
-          const breathe = Math.sin(state.time * 0.3) * 0.5 + 0.5;
-          state.targetAmp = 0.02 + breathe * 0.04;
-          state.time += 0.25 / 60;
-          state.amp += (state.targetAmp - state.amp) * 0.08;
+          // Idle - очень плоские волны с минимальным движением
+          state.targetAmp = 0.03;
+          state.time += 0.1 / 60;
+          state.amp += (state.targetAmp - state.amp) * 0.05;
+        } else if (state.mode === 'analysis') {
+          // Analysis - ИИ анализирует, заметное движение волн
+          const breathe = Math.sin(state.time * 0.8) * 0.5 + 0.5;
+          state.targetAmp = 0.12 + breathe * 0.06; // Более заметные волны
+          state.time += 0.6 / 60; // Быстрее движение
+          state.amp += (state.targetAmp - state.amp) * 0.1;
         } else {
           const breathe = Math.sin(state.time * 0.8);
           state.targetAmp = 0.9 + breathe * 0.12;
@@ -510,6 +523,7 @@
 
       // UI
       const idleBtn = document.getElementById('idle');
+      const analysisBtn = document.getElementById('analysis');
       const activeBtn = document.getElementById('active');
       const micBtn = document.getElementById('mic');
       const msg = document.getElementById('msg');
@@ -533,12 +547,14 @@
           msg.textContent = 'Mic on';
           state.mode = 'mic';
           setPressed(idleBtn, false);
+          setPressed(analysisBtn, false);
           setPressed(activeBtn, false);
           setPressed(micBtn, true);
         } catch (error) {
           msg.textContent = 'No mic access';
           state.mode = 'active';
           setPressed(idleBtn, false);
+          setPressed(analysisBtn, false);
           setPressed(activeBtn, true);
           setPressed(micBtn, false);
         }
@@ -561,6 +577,17 @@
         stopMic();
         state.mode = 'idle';
         setPressed(idleBtn, true);
+        setPressed(analysisBtn, false);
+        setPressed(activeBtn, false);
+        setPressed(micBtn, false);
+        msg.textContent = '';
+      });
+
+      analysisBtn.addEventListener('click', () => {
+        stopMic();
+        state.mode = 'analysis';
+        setPressed(idleBtn, false);
+        setPressed(analysisBtn, true);
         setPressed(activeBtn, false);
         setPressed(micBtn, false);
         msg.textContent = '';
@@ -570,6 +597,7 @@
         stopMic();
         state.mode = 'active';
         setPressed(idleBtn, false);
+        setPressed(analysisBtn, false);
         setPressed(activeBtn, true);
         setPressed(micBtn, false);
         msg.textContent = '';
@@ -580,6 +608,7 @@
           stopMic();
           state.mode = 'idle';
           setPressed(idleBtn, true);
+          setPressed(analysisBtn, false);
           setPressed(activeBtn, false);
           setPressed(micBtn, false);
           msg.textContent = '';
